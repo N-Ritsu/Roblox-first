@@ -12,6 +12,11 @@ on:
 permissions:
   contents: read
 
+# 続けて push されたときは、最新のものだけを公開する
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
