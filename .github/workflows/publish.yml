@@ -1,0 +1,68 @@
+name: Build and publish to Roblox
+
+# main ブランチに push されたときだけ公開します。
+# 開発中の作業は dev ブランチで行い、公開してよい状態になったら main にマージします。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ROJO_VERSION: v7.4.4
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rojo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$ROJO_VERSION" --repo rojo-rbx/rojo --pattern '*linux-x86_64.zip' --dir /tmp/rojo
+          unzip -o /tmp/rojo/*.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          /tmp/rojo/rojo --version
+
+      - name: Build place file
+        run: /tmp/rojo/rojo build default.project.json -o game.rbxl
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game
+          path: game.rbxl
+
+  publish:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: game
+
+      - name: Publish to Roblox
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
+        run: |
+          if [ -z "$ROBLOX_API_KEY" ] || [ -z "$UNIVERSE_ID" ] || [ -z "$PLACE_ID" ]; then
+            echo "::error::ROBLOX_API_KEY (secret), ROBLOX_UNIVERSE_ID / ROBLOX_PLACE_ID (variables) を設定してください"
+            exit 1
+          fi
+          status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${PLACE_ID}/versions?versionType=Published" \
+            -H "x-api-key: ${ROBLOX_API_KEY}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @game.rbxl)
+          cat response.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error::公開に失敗しました (HTTP $status)"
+            exit 1
+          fi
