@@ -54,8 +54,8 @@ jobs:
       - name: Publish to Roblox
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
-          PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
+          UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID || secrets.ROBLOX_UNIVERSE_ID }}
+          PLACE_ID: ${{ vars.ROBLOX_PLACE_ID || secrets.ROBLOX_PLACE_ID }}
         run: |
           if [ -z "$ROBLOX_API_KEY" ] || [ -z "$UNIVERSE_ID" ] || [ -z "$PLACE_ID" ]; then
             echo "::error::ROBLOX_API_KEY (secret), ROBLOX_UNIVERSE_ID / ROBLOX_PLACE_ID (variables) を設定してください"
