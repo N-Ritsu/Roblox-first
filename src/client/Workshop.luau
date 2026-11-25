@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
@@ -43,6 +44,10 @@ local craftButton: TextButton
 local craft5Button: TextButton
 local highlight: BasePart? = nil -- プレビューで選択中の部品を示す光る枠
 local orbitAngle = 0
+local dragging = false
+local dragInput: InputObject? = nil
+local dragX = 0
+local lastDrag = 0
 local orbitDistance = 10
 local orbitHeight = 1
 
@@ -642,6 +647,34 @@ local function createGui()
 	viewportCamera.Parent = viewport
 	viewport.CurrentCamera = viewportCamera
 
+	-- プレビューをドラッグして回す
+	viewport.Active = true
+	viewport.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragInput = input
+			dragX = input.Position.X
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then
+			return
+		end
+		local isMove = input.UserInputType == Enum.UserInputType.MouseMovement or (input.UserInputType == Enum.UserInputType.Touch and input == dragInput)
+		if isMove then
+			orbitAngle -= (input.Position.X - dragX) * 0.012
+			dragX = input.Position.X
+			lastDrag = os.clock()
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input == dragInput) then
+			dragging = false
+			dragInput = nil
+			lastDrag = os.clock()
+		end
+	end)
+
 	designList = Instance.new("ScrollingFrame")
 	designList.Size = UDim2.new(1, 0, 0.4, -4)
 	designList.Position = UDim2.new(0, 0, 0.6, 4)
@@ -767,7 +800,10 @@ function Workshop.Start()
 
 	RunService.RenderStepped:Connect(function(dt)
 		if panel.Visible then
-			orbitAngle += dt * 0.6
+			-- 指やマウスで回した直後は、自動で回さない
+			if not dragging and os.clock() - lastDrag > 3 then
+				orbitAngle += dt * 0.6
+			end
 			updateCamera()
 			if highlight then
 				highlight.Transparency = 0.55 + 0.25 * math.sin(os.clock() * 5)
