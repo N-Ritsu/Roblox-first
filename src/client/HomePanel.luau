@@ -123,7 +123,8 @@ local function render()
 	for i, id in ids do
 		local design = profile.designs[id]
 		local stock = profile.stock[id] or 0
-		local button = UI.Button(list, ("%s を置く（在庫 %d）"):format(design.name, stock), if stock > 0 then UI.Colors.Good else UI.Colors.Muted, {
+		local label = if design.boughtFrom then ("%s（%s さんの店）"):format(design.name, design.boughtFrom) else design.name
+		local button = UI.Button(list, ("%s を置く（%d）"):format(label, stock), if stock > 0 then UI.Colors.Good else UI.Colors.Muted, {
 			Size = UDim2.new(1, -12, 0, 34),
 			LayoutOrder = 10 + i,
 		})

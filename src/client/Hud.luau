@@ -61,8 +61,12 @@ function Hud.Start()
 	end)
 
 	-- 商品が売れたときのお知らせ
-	Net.Event("Sale").OnClientEvent:Connect(function(itemName: string, price: number)
-		UI.Toast(playerGui, ("「%s」が売れた！ +%d コイン"):format(itemName, price), UI.Colors.Good)
+	Net.Event("Sale").OnClientEvent:Connect(function(itemName: string, price: number, buyerName: string?)
+		if buyerName then
+			UI.Toast(playerGui, ("%s さんが「%s」を買ってくれた！ +%d"):format(buyerName, itemName, price), UI.Colors.Good)
+		else
+			UI.Toast(playerGui, ("「%s」が売れた！ +%d コイン"):format(itemName, price), UI.Colors.Good)
+		end
 	end)
 end
 

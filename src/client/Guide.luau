@@ -16,7 +16,12 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- 今のデータから、次にやることを決める
 local function currentStep(profile: any): (number, string)
-	local hasDesign = next(profile.designs) ~= nil
+	local hasDesign = false
+	for _, design in profile.designs do
+		if not design.boughtFrom then
+			hasDesign = true
+		end
+	end
 	if not hasDesign then
 		return 1, "① 左の「工房」ボタンで、アイテムをデザインして保存しよう"
 	end

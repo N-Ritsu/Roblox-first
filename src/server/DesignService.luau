@@ -41,8 +41,10 @@ end
 
 local function countDesigns(profile: any): number
 	local n = 0
-	for _ in profile.designs do
-		n += 1
+	for _, design in profile.designs do
+		if not design.boughtFrom then
+			n += 1
+		end
 	end
 	return n
 end
@@ -66,6 +68,9 @@ local function saveDesign(player: Player, raw: any, editId: any): (boolean, stri
 	design.name = name
 
 	local id: string
+	if type(editId) == "string" and profile.designs[editId] and profile.designs[editId].boughtFrom then
+		return false, "買ったアイテムは編集できません"
+	end
 	if type(editId) == "string" and profile.designs[editId] then
 		id = editId
 	else

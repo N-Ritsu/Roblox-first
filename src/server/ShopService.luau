@@ -1,6 +1,8 @@
 --!strict
 -- 製作（デザインから在庫を作る）と、店の棚への陳列・表示
 
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -16,6 +18,7 @@ ShopService.MaxStock = 99
 ShopService.MaxPrice = 9999
 ShopService.SlotCount = #PlotService.ShelfOffsets
 
+local saleEvent = Net.Event("Sale")
 local lastRequest: { [Player]: number } = {}
 local function tooFast(player: Player): boolean
 	local now = os.clock()
@@ -36,8 +39,20 @@ local function displayFolder(plot: PlotService.Plot): Folder
 	return folder :: Folder
 end
 
+-- 棚のプロンプトに商品名と値段を出す（訪れた人が何を売っているか分かるように）
+local function setPromptText(plot: PlotService.Plot, slot: number, text: string?)
+	local tablePart = plot.model:FindFirstChild("ShelfTable" .. slot)
+	local prompt = tablePart and tablePart:FindFirstChild("ShelfPrompt")
+	if prompt and prompt:IsA("ProximityPrompt") then
+		prompt.ObjectText = text or ("陳列台 " .. slot)
+	end
+end
+
 local function clearDisplays(plot: PlotService.Plot)
 	displayFolder(plot):ClearAllChildren()
+	for slot = 1, ShopService.SlotCount do
+		setPromptText(plot, slot, nil)
+	end
 end
 
 -- 店主の棚の表示を作り直す
@@ -52,6 +67,12 @@ function ShopService.Render(player: Player)
 	for slot = 1, ShopService.SlotCount do
 		local shelf = profile.shelves[tostring(slot)]
 		local design = shelf and profile.designs[shelf.designId]
+		if shelf and design then
+			local left = profile.stock[shelf.designId] or 0
+			setPromptText(plot, slot, if left > 0 then ("%s・%d コイン"):format(design.name, shelf.price) else design.name .. "・売り切れ")
+		else
+			setPromptText(plot, slot, nil)
+		end
 		if shelf and design then
 			local top = plot.origin * PlotService.ShelfOffsets[slot]
 			local display = Instance.new("Model")
@@ -117,6 +138,9 @@ local function craft(player: Player, designId: any, count: any): (boolean, strin
 	if type(count) ~= "number" or count ~= count then
 		return false, "個数が正しくありません"
 	end
+	if profile.designs[designId].boughtFrom then
+		return false, "買ったアイテムは作れません"
+	end
 	count = math.clamp(math.floor(count), 1, ShopService.MaxStock)
 	local current = profile.stock[designId] or 0
 	count = math.min(count, ShopService.MaxStock - current)
@@ -155,6 +179,9 @@ local function setShelf(player: Player, slot: any, designId: any, price: any): (
 	if type(designId) ~= "string" or not profile.designs[designId] then
 		return false, "デザインが見つかりません"
 	end
+	if profile.designs[designId].boughtFrom then
+		return false, "買ったアイテムは売れません（自宅に飾れます）"
+	end
 	if type(price) ~= "number" or price ~= price then
 		return false, "値段が正しくありません"
 	end
@@ -163,6 +190,75 @@ local function setShelf(player: Player, slot: any, designId: any, price: any): (
 	DataService.Changed(player)
 	ShopService.Render(player)
 	return true, "棚に並べました！"
+end
+
+-- 他のプレイヤーの店の棚から買う。買ったアイテムは自宅に飾れる（作り直し・転売はできない）
+ShopService.MaxBought = 30
+local function buy(buyer: Player, ownerUserId: any, slot: any): (boolean, string)
+	if tooFast(buyer) then
+		return false, "少し待ってからどうぞ"
+	end
+	if type(ownerUserId) ~= "number" or type(slot) ~= "number" or slot ~= slot then
+		return false, "お店が見つかりません"
+	end
+	local seller = Players:GetPlayerByUserId(ownerUserId)
+	if not seller or seller == buyer then
+		return false, if seller == buyer then "自分のお店では買えません" else "お店が見つかりません"
+	end
+	local sellerProfile = DataService.Get(seller)
+	local buyerProfile = DataService.Get(buyer)
+	if not sellerProfile or not buyerProfile then
+		return false, "データを読み込み中です"
+	end
+	local shelf = sellerProfile.shelves[tostring(math.floor(slot))]
+	local design = shelf and sellerProfile.designs[shelf.designId]
+	if not shelf or not design then
+		return false, "この棚には何もありません"
+	end
+	local stock = sellerProfile.stock[shelf.designId] or 0
+	if stock <= 0 then
+		return false, "売り切れです"
+	end
+	-- 同じ店の同じ商品は1つのアイテムとしてまとめる
+	local sourceKey = seller.UserId .. ":" .. shelf.designId
+	local targetId: string? = nil
+	local boughtCount = 0
+	for id, d in buyerProfile.designs do
+		if d.boughtFrom then
+			boughtCount += 1
+			if d.sourceKey == sourceKey then
+				targetId = id
+			end
+		end
+	end
+	if not targetId and boughtCount >= ShopService.MaxBought then
+		return false, ("買ったアイテムは%d種類までです"):format(ShopService.MaxBought)
+	end
+	local price = shelf.price
+	if not DataService.TrySpend(buyer, price) then
+		return false, ("コインが足りません（%d コイン必要）"):format(price)
+	end
+	sellerProfile.stock[shelf.designId] = stock - 1
+	sellerProfile.stats.sold += 1
+	sellerProfile.stats.earned += price
+	DataService.AddCoins(seller, price)
+
+	if not targetId then
+		targetId = "d" .. buyerProfile.nextDesignId
+		buyerProfile.nextDesignId += 1
+		buyerProfile.designs[targetId] = {
+			name = design.name,
+			parts = HttpService:JSONDecode(HttpService:JSONEncode(design.parts)),
+			boughtFrom = seller.DisplayName,
+			sourceKey = sourceKey,
+		}
+	end
+	local id = targetId :: string
+	buyerProfile.stock[id] = (buyerProfile.stock[id] or 0) + 1
+	DataService.Changed(buyer)
+	ShopService.Render(seller)
+	saleEvent:FireClient(seller, design.name, price, buyer.DisplayName)
+	return true, ("「%s」を買いました！ 自宅に飾れます"):format(design.name)
 end
 
 local function wrap(name: string, fn: (...any) -> (boolean, string))
@@ -179,6 +275,7 @@ end
 function ShopService.Start()
 	wrap("CraftItem", craft)
 	wrap("SetShelf", setShelf)
+	wrap("BuyFromShelf", buy)
 
 	-- 棚にプロンプトをつける（店主だけが使える。判定はクライアント表示とサーバー処理の両方）
 	for _, plot in PlotService.All() do
@@ -208,7 +305,7 @@ function ShopService.Start()
 	PlotService.Released:Connect(function(_, plot)
 		clearDisplays(plot)
 	end)
-	game:GetService("Players").PlayerRemoving:Connect(function(player)
+	Players.PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil
 	end)
 end

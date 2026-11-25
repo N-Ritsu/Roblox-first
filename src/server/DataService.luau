@@ -173,6 +173,10 @@ local function setupLeaderstats(player: Player, profile: Profile)
 	coins.Name = "コイン"
 	coins.Value = profile.coins
 	coins.Parent = leaderstats
+	local sold = Instance.new("IntValue")
+	sold.Name = "売った数"
+	sold.Value = profile.stats.sold
+	sold.Parent = leaderstats
 	leaderstats.Parent = player
 end
 
@@ -190,6 +194,10 @@ function DataService.Changed(player: Player)
 	local coins = leaderstats and leaderstats:FindFirstChild("コイン")
 	if coins and coins:IsA("IntValue") then
 		coins.Value = profile.coins
+	end
+	local sold = leaderstats and leaderstats:FindFirstChild("売った数")
+	if sold and sold:IsA("IntValue") then
+		sold.Value = profile.stats.sold
 	end
 	profileUpdated:FireClient(player, profile)
 end

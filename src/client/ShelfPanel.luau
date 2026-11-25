@@ -17,6 +17,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local setShelfRemote = Net.Function("SetShelf")
 local craftRemote = Net.Function("CraftItem")
+local buyRemote = Net.Function("BuyFromShelf")
 
 local gui: ScreenGui
 local panel: Frame
@@ -64,8 +65,10 @@ local function render()
 		end
 	end
 	local ids = {}
-	for id in profile.designs do
-		table.insert(ids, id)
+	for id, design in profile.designs do
+		if not design.boughtFrom then -- 買ったアイテムは売れない
+			table.insert(ids, id)
+		end
 	end
 	table.sort(ids, function(a, b)
 		return (tonumber(string.sub(a, 2)) or 0) < (tonumber(string.sub(b, 2)) or 0)
@@ -262,10 +265,15 @@ function ShelfPanel.Start()
 			return
 		end
 		local plot = prompt:FindFirstAncestorWhichIsA("Model")
-		if plot and plot:GetAttribute("OwnerUserId") == player.UserId then
-			ShelfPanel.Open(prompt:GetAttribute("Slot") :: number)
+		local ownerId = plot and plot:GetAttribute("OwnerUserId")
+		local slot = prompt:GetAttribute("Slot") :: number
+		if ownerId == player.UserId then
+			ShelfPanel.Open(slot)
+		elseif type(ownerId) == "number" then
+			-- 他の人のお店：買う
+			invoke(buyRemote, ownerId, slot)
 		else
-			toast("ここは他の人のお店の棚です")
+			toast("ここは空き店舗です")
 		end
 	end)
 	State.Changed:Connect(function()

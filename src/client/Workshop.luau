@@ -322,8 +322,10 @@ local function buildDesignList()
 		return
 	end
 	local ids = {}
-	for id in profile.designs do
-		table.insert(ids, id)
+	for id, design in profile.designs do
+		if not design.boughtFrom then -- 買ったアイテムは工房では編集できない
+			table.insert(ids, id)
+		end
 	end
 	table.sort(ids, function(a, b)
 		return (tonumber(string.sub(a, 2)) or 0) < (tonumber(string.sub(b, 2)) or 0)

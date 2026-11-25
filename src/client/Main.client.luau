@@ -8,6 +8,7 @@ local modules = {
 	"PartShop",
 	"Guide",
 	"HomePanel",
+	"Prompts", -- Plots を待つので最後
 }
 
 for _, name in modules do
