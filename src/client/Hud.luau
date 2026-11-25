@@ -56,6 +56,26 @@ function Hud.Start()
 		last = coins
 	end)
 
+	-- 今週のお題（画面下）
+	local Theme = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Theme"))
+	local themeFrame = UI.Frame(gui, {
+		Name = "Theme",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Size = UDim2.new(0, 230, 0, 44),
+		Position = UDim2.new(0.5, 0, 1, -12), -- 下の真ん中（右上はプレイヤー一覧と重なるため）
+		BackgroundColor3 = Color3.fromRGB(255, 240, 190),
+	})
+	UI.Corner(themeFrame, 12)
+	UI.Stroke(themeFrame, UI.Colors.Coin, 2)
+	UI.Label(themeFrame, "今週のお題（高く売れる）", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.new(0, 6, 0, 3) })
+	local themeText = UI.Label(themeFrame, Theme.Text(Theme.Current()), { Size = UDim2.new(1, -12, 0, 22), Position = UDim2.new(0, 6, 0, 19) })
+	task.spawn(function()
+		while true do
+			task.wait(60)
+			themeText.Text = Theme.Text(Theme.Current())
+		end
+	end)
+
 	-- サーバーからのお知らせ
 	Net.Event("Notice").OnClientEvent:Connect(function(text: string)
 		UI.Toast(playerGui, text, UI.Colors.Accent)

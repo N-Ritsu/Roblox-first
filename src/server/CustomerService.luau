@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
+local Theme = require(Shared:WaitForChild("Theme"))
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
@@ -273,12 +274,19 @@ local function decide(design: any, price: number, preference: Preference?, rich:
 	if liked then
 		willing *= CustomerService.PreferenceBonus
 	end
+	local themed = Theme.Matches(design, Theme.Current())
+	if themed then
+		willing *= Theme.Bonus
+	end
 	if price <= willing then
 		if rich then
 			return true, "気に入った！いただこう"
 		end
 		if liked then
 			return true, "これこれ！ほしかったの！"
+		end
+		if themed then
+			return true, "今週のお題にぴったり！"
 		end
 		return true, if price <= value * 0.9 then "安い！買う！" else "これください！"
 	end
