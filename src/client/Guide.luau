@@ -33,7 +33,7 @@ local function currentStep(profile: any): (number, string)
 	end
 	local hasShelf = next(profile.shelves) ~= nil
 	if not hasStock and profile.stats.sold == 0 then
-		return 2, "② 工房の「1個作る」で商品を作ろう"
+		return 2, "② 工房の「1個」ボタンで商品を作ろう"
 	end
 	if not hasShelf then
 		return 3, "③ お店の陳列台に近づいて、商品を並べよう"

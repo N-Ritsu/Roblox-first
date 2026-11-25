@@ -38,6 +38,8 @@ local nameBox: TextBox
 local infoLabel: TextLabel
 local deleteButton: TextButton
 local craftButton: TextButton
+local craft5Button: TextButton
+local highlight: BasePart? = nil -- プレビューで選択中の部品を示す光る枠
 local orbitAngle = 0
 local orbitDistance = 10
 local orbitHeight = 1
@@ -79,6 +81,19 @@ local function refreshPreview()
 	model:PivotTo(CFrame.new())
 	model.Parent = viewport
 	previewModel = model
+	-- 選択中の部品に、少し大きい半透明の光る殻をかぶせて目立たせる
+	highlight = nil
+	local piece = model:FindFirstChild("Piece" .. selected)
+	if piece and piece:IsA("BasePart") and #editing.parts > 1 then
+		local shell = piece:Clone()
+		shell.Name = "Highlight"
+		shell.Size = piece.Size + Vector3.new(0.25, 0.25, 0.25)
+		shell.Material = Enum.Material.Neon
+		shell.Color = Color3.fromRGB(255, 230, 90)
+		shell.Transparency = 0.6
+		shell.Parent = model
+		highlight = shell
+	end
 	local _, size = model:GetBoundingBox()
 	local longest = math.max(size.X, size.Y, size.Z)
 	orbitDistance = longest * 1.4 + 3
@@ -315,8 +330,23 @@ local function buildDesignList()
 	local newButton = UI.Button(designList, "＋ 新しく作る", UI.Colors.Good, { Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 0 })
 	newButton.Activated:Connect(function()
 		newDesign()
+		nameBox.Text = ""
 		refresh()
 	end)
+	if editId then
+		-- 今のデザインを元に、別のデザインとして作り始める
+		local copyButton = UI.Button(designList, "今のデザインをコピー", Color3.fromRGB(90, 170, 240), { Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 0 })
+		copyButton.Activated:Connect(function()
+			editing = deepCopy(editing)
+			editId = nil
+			local base = nameBox.Text
+			if utf8.len(base) and (utf8.len(base) :: number) <= 18 then
+				nameBox.Text = base .. "2"
+			end
+			refresh()
+			toast("コピーしました。名前を変えて保存してください")
+		end)
+	end
 	local profile = State.profile
 	if not profile then
 		return
@@ -355,12 +385,14 @@ local function updateInfo()
 		stock = profile.stock[editId]
 	end
 	if editId then
-		infoLabel.Text = ("価値 約%d ・ 製作 %d コイン ・ 在庫 %d"):format(value, cost, stock)
+		infoLabel.Text = ("価値 約%d ・ 在庫 %d"):format(value, stock)
 	else
 		infoLabel.Text = ("価値 約%d ・ 製作 %d コイン（保存すると作れます）"):format(value, cost)
 	end
 	craftButton.Visible = editId ~= nil
-	craftButton.Text = ("1個作る（%d）"):format(cost)
+	craftButton.Text = ("1個（%d）"):format(cost)
+	craft5Button.Visible = editId ~= nil
+	craft5Button.Text = ("5個（%d）"):format(cost * 5)
 	deleteButton.Visible = editId ~= nil
 	deleteButton.Text = if deleteArmed then "本当に消す？" else "消す"
 end
@@ -427,7 +459,7 @@ local function samePartList(a: any, b: any): boolean
 	return true
 end
 
-local function craft()
+local function craft(count: number)
 	if busy or not editId then
 		return
 	end
@@ -442,7 +474,7 @@ local function craft()
 	end
 	busy = true
 	local ok, result, message = pcall(function()
-		return craftRemote:InvokeServer(editId, 1)
+		return craftRemote:InvokeServer(editId, count)
 	end)
 	busy = false
 	if not ok then
@@ -601,14 +633,24 @@ local function createGui()
 	local saveButton = UI.Button(right, "保存", UI.Colors.Good, { Size = UDim2.new(0, 96, 0, 40), Position = UDim2.new(1, -96, 1, -88) })
 	saveButton.Activated:Connect(save)
 
-	craftButton = UI.Button(right, "1個作る", UI.Colors.Coin, {
-		Size = UDim2.new(0, 130, 0, 38),
-		Position = UDim2.new(1, -130, 1, -40),
+	craftButton = UI.Button(right, "1個", UI.Colors.Coin, {
+		Size = UDim2.new(0, 96, 0, 38),
+		Position = UDim2.new(1, -200, 1, -40),
 		TextColor3 = Color3.fromRGB(110, 70, 20),
 	})
-	craftButton.Activated:Connect(craft)
+	craftButton.Activated:Connect(function()
+		craft(1)
+	end)
+	craft5Button = UI.Button(right, "5個", UI.Colors.Coin, {
+		Size = UDim2.new(0, 96, 0, 38),
+		Position = UDim2.new(1, -96, 1, -40),
+		TextColor3 = Color3.fromRGB(110, 70, 20),
+	})
+	craft5Button.Activated:Connect(function()
+		craft(5)
+	end)
 	infoLabel = UI.Label(right, "", {
-		Size = UDim2.new(1, -138, 0, 28),
+		Size = UDim2.new(1, -208, 0, 28),
 		Position = UDim2.new(0, 0, 1, -40),
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
@@ -653,6 +695,9 @@ function Workshop.Start()
 		if panel.Visible then
 			orbitAngle += dt * 0.6
 			updateCamera()
+			if highlight then
+				highlight.Transparency = 0.55 + 0.25 * math.sin(os.clock() * 5)
+			end
 		end
 	end)
 
