@@ -315,6 +315,49 @@ local function buildControls()
 		end)
 	end
 
+	-- 作品全体をまとめて大きく・小さく（大きさも位置も同じ倍率。0.5きざみ・上限内に丸める）
+	local scaleGrid = section("全体の大きさ", UDim2.new(0, 150, 0, 32))
+	local function scaleAll(factor: number)
+		local step = ItemBuilder.Step
+		-- 0.5きざみだと四捨五入では小さな部品が変わらないので、大きくするときは切り上げ・小さくするときは切り捨て（向きは絶対値で）
+		local function round(v: number, min: number, max: number): number
+			local units = math.abs(v) * factor / step
+			local whole = if factor > 1 then math.ceil(units - 1e-6) else math.floor(units + 1e-6)
+			local value = (if v < 0 then -whole else whole) * step
+			return math.clamp(value, min, max)
+		end
+		local changed, clamped = false, false
+		local scaled = deepCopy(parts)
+		for _, p in scaled do
+			for axis = 1, 3 do
+				local size = round(p.size[axis], ItemBuilder.SizeMin, ItemBuilder.SizeMax)
+				local pos = round(p.pos[axis], -ItemBuilder.PosLimit, ItemBuilder.PosLimit)
+				local wantSize, wantPos = p.size[axis] * factor, p.pos[axis] * factor
+				if wantSize > ItemBuilder.SizeMax or wantSize < ItemBuilder.SizeMin or math.abs(wantPos) > ItemBuilder.PosLimit then
+					clamped = true
+				end
+				changed = changed or size ~= p.size[axis] or pos ~= p.pos[axis]
+				p.size[axis] = size
+				p.pos[axis] = pos
+			end
+		end
+		if not changed then
+			toast(if factor > 1 then "これ以上は大きくできません" else "これ以上は小さくできません")
+			return
+		end
+		editing.parts = scaled
+		refresh()
+		if clamped then
+			toast("上限に届いた部品があるので、形が少し変わったかもしれません。「元に戻す」で戻せます")
+		end
+	end
+	choiceButton(scaleGrid, "全体を大きく", false, true, 1, function()
+		scaleAll(1.25)
+	end)
+	choiceButton(scaleGrid, "全体を小さく", false, true, 2, function()
+		scaleAll(0.8)
+	end)
+
 	-- 形
 	local shapeGrid = section("形")
 	for i, shape in Catalog.Shapes do
