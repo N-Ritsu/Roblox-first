@@ -18,6 +18,11 @@ function Season.IsActive(season: string?): boolean
 		local month, day = Season.TodayJST()
 		return month == 12 or (month == 1 and day <= 7)
 	end
+	-- お正月：1月1日〜1月7日（冬の期間の中に重なる）
+	if season == "newyear" then
+		local month, day = Season.TodayJST()
+		return month == 1 and day <= 7
+	end
 	return false
 end
 

@@ -144,6 +144,50 @@ local function buildRoofSnow(parent: Instance)
 	end
 end
 
+-- お正月の門松（ランキング掲示板の手前に左右1つずつ）
+local function buildKadomatsu(parent: Instance, position: Vector3)
+	local model = Instance.new("Model")
+	model.Name = "Kadomatsu"
+	local bamboo = Color3.fromRGB(90, 160, 80)
+	local up = CFrame.Angles(0, 0, math.rad(90)) -- 円柱を縦に
+	-- 台（わらを巻いた鉢）
+	Build.Part(model, { Name = "Pot", Size = Vector3.new(2, 2.6, 2.6), CFrame = CFrame.new(position + Vector3.new(0, 1, 0)) * up, Color = Color3.fromRGB(200, 165, 100), Material = Enum.Material.Fabric, Shape = Enum.PartType.Cylinder })
+	-- 竹3本（高さちがい）
+	local stalks = { { 0, -0.45, 4.6 }, { -0.45, 0.35, 3.8 }, { 0.45, 0.35, 3.2 } }
+	for _, s in stalks do
+		local height = s[3]
+		Build.Part(model, { Name = "Bamboo", Size = Vector3.new(height, 0.7, 0.7), CFrame = CFrame.new(position + Vector3.new(s[1], 2 + height / 2, s[2])) * up, Color = bamboo, Material = Enum.Material.SmoothPlastic, Shape = Enum.PartType.Cylinder })
+		-- 切り口（明るい色のふた）
+		Build.Part(model, { Name = "Cut", Size = Vector3.new(0.1, 0.72, 0.72), CFrame = CFrame.new(position + Vector3.new(s[1], 2 + height + 0.05, s[2])) * up, Color = Color3.fromRGB(230, 220, 150), Material = Enum.Material.SmoothPlastic, Shape = Enum.PartType.Cylinder, CanCollide = false })
+	end
+	-- 松の葉と、赤い実
+	for i = 1, 4 do
+		local angle = i / 4 * math.pi * 2
+		Build.Part(model, { Name = "Pine", Size = Vector3.new(1.2, 1.2, 1.2), CFrame = CFrame.new(position + Vector3.new(math.cos(angle) * 1.1, 2.4, math.sin(angle) * 1.1)), Color = Color3.fromRGB(40, 110, 55), Material = Enum.Material.Grass, Shape = Enum.PartType.Ball, CanCollide = false })
+	end
+	Build.Part(model, { Name = "Berry", Size = Vector3.new(0.5, 0.5, 0.5), CFrame = CFrame.new(position + Vector3.new(1.2, 2.9, 0)), Color = Color3.fromRGB(210, 30, 40), Shape = Enum.PartType.Ball, CanCollide = false })
+	model.Parent = parent
+end
+
+local newYearDecor: Folder? = nil
+local function setNewYear(active: boolean)
+	if active and not newYearDecor then
+		local folder = Instance.new("Folder")
+		folder.Name = "NewYearDecor"
+		local spot = WorldService.SpotPosition(WorldService.RankingSpot, 18.5) + Vector3.new(0, 0.4, 0) -- 掲示板（半径22）の手前
+		local outward = Vector3.new(spot.X, 0, spot.Z).Unit
+		local side = Vector3.new(-outward.Z, 0, outward.X)
+		for _, sign in { -1, 1 } do
+			buildKadomatsu(folder, spot + side * (5 * sign))
+		end
+		folder.Parent = workspace
+		newYearDecor = folder
+	elseif not active and newYearDecor then
+		newYearDecor:Destroy()
+		newYearDecor = nil
+	end
+end
+
 local decor: Folder? = nil
 
 local function setDecor(active: boolean)
@@ -171,10 +215,14 @@ function SeasonService.Start()
 	local noticeEvent = Net.Event("Notice")
 	local wasActive = Season.IsActive("winter")
 	setDecor(wasActive)
+	local wasNewYear = Season.IsActive("newyear")
+	setNewYear(wasNewYear)
 	-- 入ってきた人に、開催中なら一度だけ知らせる（ほかのお知らせと重ならないよう少し待つ）
 	Players.PlayerAdded:Connect(function(player)
 		task.delay(20, function()
-			if player.Parent and Season.IsActive("winter") then
+			if player.Parent and Season.IsActive("newyear") then
+				noticeEvent:FireClient(player, "あけましておめでとう！ 広場に門松が立っています（冬のイベントも1/7まで）")
+			elseif player.Parent and Season.IsActive("winter") then
 				noticeEvent:FireClient(player, WINTER_NOTE)
 			end
 		end)
@@ -184,6 +232,14 @@ function SeasonService.Start()
 		while true do
 			task.wait(60)
 			local ok, err = pcall(function()
+				local newYear = Season.IsActive("newyear")
+				if newYear ~= wasNewYear then
+					wasNewYear = newYear
+					setNewYear(newYear)
+					if newYear then
+						noticeEvent:FireAllClients("あけましておめでとう！ 広場に門松が立ちました")
+					end
+				end
 				local active = Season.IsActive("winter")
 				if active ~= wasActive then
 					wasActive = active
