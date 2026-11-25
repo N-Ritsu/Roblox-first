@@ -331,6 +331,12 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		local stock = shelf and profile.stock[shelf.designId] or 0
 		if shelf and design and stock > 0 then
 			local willBuy, line = decide(design, shelf.price, preference)
+			-- 評判：納得の値段で買えると上がり、高すぎて買えないと下がる
+			if willBuy then
+				ShopService.AddReputation(owner, if shelf.price <= ItemBuilder.Value(design) * 1.1 then 2 else 1)
+			elseif shelf.price > ItemBuilder.Value(design) * 1.6 then
+				ShopService.AddReputation(owner, -1)
+			end
 			if willBuy then
 				bought = true
 				profile.stock[shelf.designId] = stock - 1
@@ -344,6 +350,7 @@ local function visit(plot: PlotService.Plot, owner: Player)
 			say(customer, line)
 		else
 			say(customer, "売り切れか…")
+			ShopService.AddReputation(owner, -0.5)
 		end
 		if not pause(1.2, isValid) then
 			return finish()
@@ -351,6 +358,7 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		say(customer, nil)
 	else
 		say(customer, "何もないなぁ")
+		ShopService.AddReputation(owner, -0.5)
 		if not pause(1.5, isValid) then
 			return finish()
 		end
@@ -420,9 +428,11 @@ function CustomerService.Start()
 				if owner and hasStockedShelf(owner) then
 					if not nextSpawn[plot.index] then
 						nextSpawn[plot.index] = now + 3
-					elseif now >= nextSpawn[plot.index] and (active[plot.index] or 0) < CustomerService.MaxPerPlot then
+					elseif now >= nextSpawn[plot.index] and (active[plot.index] or 0) < CustomerService.MaxPerPlot + (if ShopService.Stars(owner) >= 4 then 1 else 0) then
+						-- 評判が高い店ほど、お客さんが来る間隔が短い（★5で約0.6倍）
 						local interval = CustomerService.SpawnInterval
-						nextSpawn[plot.index] = now + random:NextNumber(interval[1], interval[2])
+						local speed = 1 + 0.15 * (ShopService.Stars(owner) - 1)
+						nextSpawn[plot.index] = now + random:NextNumber(interval[1], interval[2]) / speed
 						active[plot.index] = (active[plot.index] or 0) + 1
 						task.spawn(function()
 							local ok, err = pcall(visit, plot, owner)

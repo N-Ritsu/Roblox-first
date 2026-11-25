@@ -72,6 +72,8 @@ local function render()
 		end
 	end
 
+	local stars = math.clamp(1 + math.floor((profile.reputation or 0) / 25), 1, 5)
+	heading(("お店の評判 %s%s"):format(string.rep("★", stars) .. string.rep("☆", 5 - stars), if stars < 5 then "（相場くらいの値段で売ると上がる）" else ""), 0)
 	heading(("陳列台：%d / %d 台"):format(profile.shelfSlots, ShopUpgrades.BaseShelves + #ShopUpgrades.ShelfPrices), 1)
 	local price = ShopUpgrades.NextShelfPrice(profile.shelfSlots)
 	if price then

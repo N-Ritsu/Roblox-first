@@ -20,6 +20,7 @@ ShopService.MaxPrice = 9999
 ShopService.SlotCount = #PlotService.ShelfOffsets
 
 local saleEvent = Net.Event("Sale")
+local noticeEvent = Net.Event("Notice")
 local lastRequest: { [Player]: number } = {}
 local function tooFast(player: Player): boolean
 	local now = os.clock()
@@ -90,6 +91,42 @@ local function clearDisplays(plot: PlotService.Plot)
 	applyLayout(plot, ShopUpgrades.BaseShelves, ShopUpgrades.Walls[1].id, ShopUpgrades.Floors[1].id)
 end
 
+-- 店の評判（0〜100）と星（1〜5）
+function ShopService.Stars(player: Player): number
+	local profile = DataService.Get(player)
+	if not profile then
+		return 1
+	end
+	return math.clamp(1 + math.floor(profile.reputation / 25), 1, 5)
+end
+
+local function starText(stars: number): string
+	return string.rep("★", stars) .. string.rep("☆", 5 - stars)
+end
+
+local function updateSign(player: Player)
+	local plot = PlotService.Get(player)
+	if plot then
+		plot.signLabel.Text = ("%s のお店 %s"):format(player.DisplayName, starText(ShopService.Stars(player)))
+	end
+end
+
+function ShopService.AddReputation(player: Player, amount: number)
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	local before = ShopService.Stars(player)
+	profile.reputation = math.clamp(profile.reputation + amount, 0, 100)
+	local after = ShopService.Stars(player)
+	if after ~= before then
+		updateSign(player)
+		DataService.Changed(player)
+		local text = if after > before then ("お店の評判が上がった！ %s"):format(starText(after)) else ("お店の評判が下がった… %s"):format(starText(after))
+		noticeEvent:FireClient(player, text)
+	end
+end
+
 -- 店主の棚の表示を作り直す
 function ShopService.Render(player: Player)
 	local plot = PlotService.Get(player)
@@ -100,6 +137,7 @@ function ShopService.Render(player: Player)
 	local folder = displayFolder(plot)
 	folder:ClearAllChildren()
 	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor)
+	updateSign(player)
 	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
 		local shelf = profile.shelves[tostring(slot)]
 		local design = shelf and profile.designs[shelf.designId]
