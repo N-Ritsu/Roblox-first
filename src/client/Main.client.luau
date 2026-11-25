@@ -6,6 +6,7 @@ local modules = {
 	"Workshop",
 	"ShelfPanel",
 	"PartShop",
+	"ShopPanel",
 	"Guide",
 	"HomePanel",
 	"Prompts", -- Plots を待つので最後

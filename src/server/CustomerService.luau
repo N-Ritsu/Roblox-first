@@ -202,11 +202,15 @@ local function coinBurst(position: Vector3)
 	end)
 end
 
--- 棚の前（お客さんが立つ位置、ローカル座標）
-local function shelfStandOffset(slot: number): Vector3
-	local offset = PlotService.ShelfOffsets[slot].Position
-	local x = if offset.X < 0 then offset.X + 3.6 else offset.X - 3.6
-	return Vector3.new(x, 0.9, offset.Z)
+-- 商品を見て、買うかどうかと一言を決める
+local function decide(design: any, price: number): (boolean, string)
+	local value = ItemBuilder.Value(design)
+	local range = CustomerService.WillingnessRange
+	local willing = value * random:NextNumber(range[1], range[2])
+	if price <= willing then
+		return true, if price <= value * 0.9 then "安い！買う！" else "これください！"
+	end
+	return false, if price > value * 2 then "高すぎる…" else "うーん、高いなぁ"
 end
 
 local function visit(plot: PlotService.Plot, owner: Player)
@@ -225,31 +229,36 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		customer.model:Destroy()
 		active[plot.index] = math.max(0, (active[plot.index] or 1) - 1)
 	end
-
-	-- 店の前を通って入口へ
-	if not walkTo(customer, world(Vector3.new(side * 2, 0.6, -10)), isValid) then
-		return finish()
-	end
-	if not walkTo(customer, world(Vector3.new(random:NextNumber(-1.5, 1.5), 0.9, -2)), isValid) then
-		return finish()
+	local function go(x: number, y: number, z: number): boolean
+		return walkTo(customer, world(Vector3.new(x, y, z)), isValid)
 	end
 
-	-- 在庫のある棚を選んで見に行く
+	-- 店の前まで来る
+	if not go(side * 2, 0.6, -10) then
+		return finish()
+	end
+
+	-- 在庫のある棚を選ぶ
 	local profile = DataService.Get(owner)
 	if not profile then
 		return finish()
 	end
 	local candidates = {}
-	for slot = 1, ShopService.SlotCount do
+	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
 		local shelf = profile.shelves[tostring(slot)]
 		if shelf and profile.designs[shelf.designId] and (profile.stock[shelf.designId] or 0) > 0 then
 			table.insert(candidates, slot)
 		end
 	end
+	local slot = if #candidates > 0 then candidates[random:NextInteger(1, #candidates)] else nil
+	local indoor = slot == nil or not PlotService.IsOutdoorShelf(slot)
+	if indoor and not go(random:NextNumber(-1.5, 1.5), 0.9, -2) then
+		return finish()
+	end
+
 	local bought = false
-	if #candidates > 0 then
-		local slot = candidates[random:NextInteger(1, #candidates)]
-		local stand = shelfStandOffset(slot)
+	if slot then
+		local stand = PlotService.ShelfStandOffsets[slot]
 		if not walkTo(customer, world(stand), isValid) then
 			return finish()
 		end
@@ -265,10 +274,8 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		local design = shelf and profile.designs[shelf.designId]
 		local stock = shelf and profile.stock[shelf.designId] or 0
 		if shelf and design and stock > 0 then
-			local value = ItemBuilder.Value(design)
-			local range = CustomerService.WillingnessRange
-			local willing = value * random:NextNumber(range[1], range[2])
-			if shelf.price <= willing then
+			local willBuy, line = decide(design, shelf.price)
+			if willBuy then
 				bought = true
 				profile.stock[shelf.designId] = stock - 1
 				profile.stats.sold += 1
@@ -277,10 +284,8 @@ local function visit(plot: PlotService.Plot, owner: Player)
 				ShopService.Render(owner)
 				saleEvent:FireClient(owner, design.name, shelf.price)
 				coinBurst(world(PlotService.ShelfOffsets[slot].Position) + Vector3.new(0, 2, 0))
-				say(customer, if shelf.price <= value * 0.9 then "安い！買う！" else "これください！")
-			else
-				say(customer, if shelf.price > value * 2 then "高すぎる…" else "うーん、高いなぁ")
 			end
+			say(customer, line)
 		else
 			say(customer, "売り切れか…")
 		end
@@ -296,12 +301,23 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		say(customer, nil)
 	end
 
+	local exitSide = if random:NextNumber() < 0.5 then -1 else 1
+	if not indoor then
+		-- 店頭の台：その場でお礼を言って帰る
+		if bought then
+			say(customer, "ありがとう！")
+			if not pause(0.8, isValid) then
+				return finish()
+			end
+			say(customer, nil)
+		end
+		go(exitSide * 18, 0.6, -11)
+		return finish()
+	end
+
 	if bought then
 		-- レジに寄ってから帰る（棚にぶつからないよう真ん中の通路を通る）
-		if not walkTo(customer, world(Vector3.new(2, 0.9, 11)), isValid) then
-			return finish()
-		end
-		if not walkTo(customer, world(Vector3.new(8, 0.9, 11)), isValid) then
+		if not go(2, 0.9, 11) or not go(8, 0.9, 11) then
 			return finish()
 		end
 		say(customer, "ありがとう！")
@@ -309,16 +325,12 @@ local function visit(plot: PlotService.Plot, owner: Player)
 			return finish()
 		end
 		say(customer, nil)
-		if not walkTo(customer, world(Vector3.new(2, 0.9, 11)), isValid) then
+		if not go(2, 0.9, 11) then
 			return finish()
 		end
 	end
-	if not walkTo(customer, world(Vector3.new(0, 0.9, -2)), isValid) then
-		return finish()
-	end
-	local exitSide = if random:NextNumber() < 0.5 then -1 else 1
-	if walkTo(customer, world(Vector3.new(exitSide * 2, 0.6, -10)), isValid) then
-		walkTo(customer, world(Vector3.new(exitSide * 18, 0.6, -11)), isValid)
+	if go(0, 0.9, -2) and go(exitSide * 2, 0.6, -10) then
+		go(exitSide * 18, 0.6, -11)
 	end
 	finish()
 end
@@ -329,8 +341,8 @@ local function hasStockedShelf(owner: Player): boolean
 	if not profile then
 		return false
 	end
-	for _, shelf in profile.shelves do
-		if profile.designs[shelf.designId] and (profile.stock[shelf.designId] or 0) > 0 then
+	for key, shelf in profile.shelves do
+		if (tonumber(key) or 99) <= profile.shelfSlots and profile.designs[shelf.designId] and (profile.stock[shelf.designId] or 0) > 0 then
 			return true
 		end
 	end

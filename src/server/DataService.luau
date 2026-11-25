@@ -22,6 +22,9 @@ export type Profile = {
 	unlocks: { shapes: { [string]: boolean }, colors: { [string]: boolean }, materials: { [string]: boolean } },
 	shelves: { [string]: any }, -- 棚番号（文字列）→ { designId, price }
 	home: { [string]: any }, -- 自宅のマス "x_z" → { designId, rot }
+	shelfSlots: number, -- 使える陳列台の数
+	interior: { wall: string, floor: string },
+	ownedInterior: { [string]: boolean }, -- 買った内装（"wall:Mint" など）
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -62,6 +65,9 @@ local function defaultProfile(): Profile
 		unlocks = Catalog.DefaultUnlocks(),
 		shelves = {},
 		home = {},
+		shelfSlots = 4,
+		interior = { wall = "Cream", floor = "Wood" },
+		ownedInterior = {},
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,

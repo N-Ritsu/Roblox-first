@@ -42,12 +42,33 @@ local AWNING_COLORS = {
 }
 
 -- 店の中で、棚（陳列台）の位置（ローカル座標、台の上面中央）
+-- 1〜4は店の中、5〜8は店の前の歩道に置く「店頭の台」（コインで増やす）
 PlotService.ShelfOffsets = {
 	CFrame.new(-8, 3.9, 1),
 	CFrame.new(-8, 3.9, 8),
 	CFrame.new(8, 3.9, 1),
 	CFrame.new(8, 3.9, 8),
+	CFrame.new(-6, 3.6, -14),
+	CFrame.new(6, 3.6, -14),
+	CFrame.new(-11.5, 3.6, -14),
+	CFrame.new(11.5, 3.6, -14),
 }
+-- お客さんが商品を見るときに立つ位置
+PlotService.ShelfStandOffsets = {
+	Vector3.new(-4.4, 0.9, 1),
+	Vector3.new(-4.4, 0.9, 8),
+	Vector3.new(4.4, 0.9, 1),
+	Vector3.new(4.4, 0.9, 8),
+	Vector3.new(-6, 0.6, -10.8),
+	Vector3.new(6, 0.6, -10.8),
+	Vector3.new(-11.5, 0.6, -10.8),
+	Vector3.new(11.5, 0.6, -10.8),
+}
+function PlotService.IsOutdoorShelf(slot: number): boolean
+	return slot > 4
+end
+-- 内装の色を変える部品
+PlotService.WallParts = { "BackWall", "LeftWall", "RightWall", "FrontLeft", "FrontRight", "FrontHeader" }
 PlotService.SpawnOffset = CFrame.new(0, 4, 10) -- 店の入口の方を向いて立つ
 PlotService.WorkbenchOffset = CFrame.new(-8, 0.9, 14)
 PlotService.EntranceOffset = CFrame.new(0, 1, -10) -- 店の前の歩道
@@ -177,7 +198,13 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 
 	-- 陳列台
 	for i, offset in PlotService.ShelfOffsets do
-		Build.Part(model, { Name = "ShelfTable" .. i, Size = Vector3.new(4, 3, 4), CFrame = origin * offset * CFrame.new(0, -1.5, 0), Color = TRIM, Material = Enum.Material.Wood })
+		local shelfTable = Build.Part(model, { Name = "ShelfTable" .. i, Size = Vector3.new(4, 3, 4), CFrame = origin * offset * CFrame.new(0, -1.5, 0), Color = TRIM, Material = Enum.Material.Wood })
+		if PlotService.IsOutdoorShelf(i) then
+			-- 店頭の台は、増やすまで見えない（ShopService が表示を切り替える）
+			shelfTable.Transparency = 1
+			shelfTable.CanCollide = false
+			shelfTable:SetAttribute("Outdoor", true)
+		end
 	end
 	-- レジカウンター
 	Build.Part(model, { Name = "Counter", Size = Vector3.new(8, 3.5, 2), CFrame = at(8, 2.65, 13.5), Color = TRIM, Material = Enum.Material.Wood })

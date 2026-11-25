@@ -10,13 +10,16 @@ local player = Players.LocalPlayer
 
 local function apply(prompt: ProximityPrompt, mine: boolean, occupied: boolean)
 	if prompt.Name == "ShelfPrompt" then
-		prompt.Enabled = mine or occupied
+		-- まだ増やしていない陳列台（Locked）は誰にも出さない
+		prompt.Enabled = (mine or occupied) and not prompt:GetAttribute("Locked")
 		prompt.ActionText = if mine then "棚に並べる" else "買う"
 		prompt.HoldDuration = if mine then 0 else 0.4 -- 間違って買わないよう少し長押し
 	elseif prompt.Name == "WorkbenchPrompt" or prompt.Name == "HomeEnterPrompt" then
 		prompt.Enabled = mine
 	end
 end
+
+local watched: { [ProximityPrompt]: boolean } = {}
 
 local function watchPlot(plot: Instance)
 	local function refresh()
@@ -29,9 +32,28 @@ local function watchPlot(plot: Instance)
 		end
 	end
 	plot:GetAttributeChangedSignal("OwnerUserId"):Connect(refresh)
+	local function watchLock(prompt: ProximityPrompt)
+		if prompt.Name ~= "ShelfPrompt" or watched[prompt] then
+			return
+		end
+		watched[prompt] = true
+		prompt:GetAttributeChangedSignal("Locked"):Connect(function()
+			local owner = plot:GetAttribute("OwnerUserId")
+			apply(prompt, owner == player.UserId, owner ~= nil)
+		end)
+		prompt.Destroying:Connect(function()
+			watched[prompt] = nil
+		end)
+	end
+	for _, descendant in plot:GetDescendants() do
+		if descendant:IsA("ProximityPrompt") then
+			watchLock(descendant)
+		end
+	end
 	-- StreamingEnabled で後から届くプロンプトにも反映する
 	plot.DescendantAdded:Connect(function(descendant)
 		if descendant:IsA("ProximityPrompt") then
+			watchLock(descendant)
 			local owner = plot:GetAttribute("OwnerUserId")
 			apply(descendant, owner == player.UserId, owner ~= nil)
 		end

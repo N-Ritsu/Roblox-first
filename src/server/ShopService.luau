@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
+local ShopUpgrades = require(Shared:WaitForChild("ShopUpgrades"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local PlotService = require(script.Parent:WaitForChild("PlotService"))
@@ -50,11 +51,43 @@ local function setPromptText(plot: PlotService.Plot, slot: number, text: string?
 	end
 end
 
+-- 使える陳列台の数と内装を区画に反映する
+local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: string, floorId: string)
+	for slot = 1, ShopService.SlotCount do
+		local tablePart = plot.model:FindFirstChild("ShelfTable" .. slot) :: BasePart?
+		if tablePart then
+			local usable = slot <= shelfSlots
+			if tablePart:GetAttribute("Outdoor") then
+				tablePart.Transparency = if usable then 0 else 1
+				tablePart.CanCollide = usable
+			end
+			local prompt = tablePart:FindFirstChild("ShelfPrompt")
+			if prompt then
+				prompt:SetAttribute("Locked", not usable) -- クライアントの Prompts が見て表示を切り替える
+			end
+		end
+	end
+	local wall = ShopUpgrades.WallById[wallId] or ShopUpgrades.Walls[1]
+	for _, name in PlotService.WallParts do
+		local part = plot.model:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			part.Color = wall.color
+		end
+	end
+	local floor = ShopUpgrades.FloorById[floorId] or ShopUpgrades.Floors[1]
+	local floorPart = plot.model:FindFirstChild("Floor")
+	if floorPart and floorPart:IsA("BasePart") then
+		floorPart.Color = floor.color
+		floorPart.Material = floor.material
+	end
+end
+
 local function clearDisplays(plot: PlotService.Plot)
 	displayFolder(plot):ClearAllChildren()
 	for slot = 1, ShopService.SlotCount do
 		setPromptText(plot, slot, nil)
 	end
+	applyLayout(plot, ShopUpgrades.BaseShelves, ShopUpgrades.Walls[1].id, ShopUpgrades.Floors[1].id)
 end
 
 -- 店主の棚の表示を作り直す
@@ -66,7 +99,8 @@ function ShopService.Render(player: Player)
 	end
 	local folder = displayFolder(plot)
 	folder:ClearAllChildren()
-	for slot = 1, ShopService.SlotCount do
+	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor)
+	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
 		local shelf = profile.shelves[tostring(slot)]
 		local design = shelf and profile.designs[shelf.designId]
 		if shelf and design then
@@ -168,7 +202,7 @@ local function setShelf(player: Player, slot: any, designId: any, price: any): (
 		return false, "棚が正しくありません"
 	end
 	slot = math.floor(slot)
-	if slot < 1 or slot > ShopService.SlotCount then
+	if slot < 1 or slot > math.min(ShopService.SlotCount, profile.shelfSlots) then
 		return false, "棚が正しくありません"
 	end
 	local key = tostring(slot)
@@ -216,7 +250,10 @@ local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): 
 	if not sellerProfile or not buyerProfile then
 		return false, "データを読み込み中です"
 	end
-	local shelf = sellerProfile.shelves[tostring(math.floor(slot))]
+	if slot > sellerProfile.shelfSlots then
+		return false, "この棚には何もありません"
+	end
+	local shelf = sellerProfile.shelves[tostring(slot)]
 	local design = shelf and sellerProfile.designs[shelf.designId]
 	if not shelf or not design then
 		return false, "この棚には何もありません"
@@ -278,6 +315,47 @@ local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): 
 	return true, ("「%s」を買いました！ 自宅に飾れます"):format(design.name)
 end
 
+local function buyShelfSlot(player: Player): (boolean, string)
+	local profile = DataService.Get(player)
+	if not profile then
+		return false, "データを読み込み中です"
+	end
+	local price = ShopUpgrades.NextShelfPrice(profile.shelfSlots)
+	if not price or profile.shelfSlots >= ShopService.SlotCount then
+		return false, "これ以上は増やせません"
+	end
+	if not DataService.TrySpend(player, price) then
+		return false, ("コインが足りません（%d コイン必要）"):format(price)
+	end
+	profile.shelfSlots += 1
+	DataService.Changed(player)
+	ShopService.Render(player)
+	return true, "店頭に陳列台を増やしました！"
+end
+
+local function setInterior(player: Player, kind: any, id: any): (boolean, string)
+	local profile = DataService.Get(player)
+	if not profile then
+		return false, "データを読み込み中です"
+	end
+	local list = if kind == "wall" then ShopUpgrades.WallById elseif kind == "floor" then ShopUpgrades.FloorById else nil
+	local entry = list and type(id) == "string" and (list :: any)[id]
+	if not entry then
+		return false, "見つかりません"
+	end
+	local ownedKey = kind .. ":" .. id
+	if entry.price > 0 and not profile.ownedInterior[ownedKey] then
+		if not DataService.TrySpend(player, entry.price) then
+			return false, ("コインが足りません（%d コイン必要）"):format(entry.price)
+		end
+		profile.ownedInterior[ownedKey] = true
+	end
+	(profile.interior :: any)[kind] = id
+	DataService.Changed(player)
+	ShopService.Render(player)
+	return true, ("「%s」にしました"):format(entry.name)
+end
+
 local function wrap(name: string, fn: (...any) -> (boolean, string))
 	Net.Function(name).OnServerInvoke = function(player, ...)
 		local ok, a, b = pcall(fn, player, ...)
@@ -293,6 +371,8 @@ function ShopService.Start()
 	wrap("CraftItem", craft)
 	wrap("SetShelf", setShelf)
 	wrap("BuyFromShelf", buy)
+	wrap("BuyShelfSlot", buyShelfSlot)
+	wrap("SetInterior", setInterior)
 
 	-- 棚にプロンプトをつける（店主だけが使える。判定はクライアント表示とサーバー処理の両方）
 	for _, plot in PlotService.All() do
@@ -307,6 +387,7 @@ function ShopService.Start()
 				prompt.MaxActivationDistance = 9
 				prompt.RequiresLineOfSight = false
 				prompt:SetAttribute("Slot", slot)
+				prompt:SetAttribute("Locked", PlotService.IsOutdoorShelf(slot))
 				prompt.Parent = tablePart
 			end
 		end
