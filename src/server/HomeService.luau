@@ -12,8 +12,10 @@ local ShopService = require(script.Parent:WaitForChild("ShopService"))
 
 local HomeService = {}
 
+local evictVisitors: (plot: any, owner: Player?) -> ()
+
 local lastRequest: { [Player]: number } = {}
-local likedBy: { [Player]: { [number]: boolean } } = {}
+HomeService.MaxLikers = 200 -- いいねした人の記録の上限（同じ人は1回まで）
 
 local function cellKey(x: number, z: number): string
 	return x .. "_" .. z
@@ -152,6 +154,22 @@ local function teleport(player: Player, cf: CFrame)
 	end
 end
 
+-- 部屋の中にいる、店主以外の人を店へ帰す（店主が抜けたとき・非公開にしたとき）
+evictVisitors = function(plot: PlotService.Plot, owner: Player?)
+	local room = plot.origin * PlotService.HomeOffset
+	for _, other in game:GetService("Players"):GetPlayers() do
+		local root = other ~= owner and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			local p = room:PointToObjectSpace(root.Position)
+			if math.abs(p.X) < 17 and math.abs(p.Z) < 17 and p.Y > -1 and p.Y < 15 then
+				local home = PlotService.Get(other) or plot
+				task.spawn(teleport, other, home.origin * PlotService.SpawnOffset)
+				Net.Event("Notice"):FireClient(other, "この自宅は閉じられました")
+			end
+		end
+	end
+end
+
 function HomeService.Start()
 	Net.Function("SetHomeCell").OnServerInvoke = function(player, key, action, designId)
 		local ok, a, b = pcall(setCell, player, key, action, designId)
@@ -187,12 +205,25 @@ function HomeService.Start()
 						return
 					end
 					-- 同じ人からのいいねは、このサーバーにいる間は1回まで
-					likedBy[owner] = likedBy[owner] or {}
-					if likedBy[owner][player.UserId] then
+					-- 同じ人からのいいねは1回まで（セーブデータに記録する）
+					local likers = ownerProfile.homeLikedBy
+					local likerKey = tostring(player.UserId)
+					if likers[likerKey] then
 						noticeEvent:FireClient(player, "もういいねしました")
 						return
 					end
-					likedBy[owner][player.UserId] = true
+					local likerCount = 0
+					for _ in likers do
+						likerCount += 1
+					end
+					if likerCount >= HomeService.MaxLikers then
+						-- 記録がいっぱいなら古いものを1つ消す（順番は問わない）
+						local oldest = next(likers)
+						if oldest then
+							likers[oldest] = nil
+						end
+					end
+					likers[likerKey] = true
 					ownerProfile.homeLikes += 1
 					setLikes(plot, ownerProfile.homeLikes)
 					DataService.Changed(owner)
@@ -219,21 +250,32 @@ function HomeService.Start()
 		HomeService.Render(player)
 	end)
 	PlotService.Released:Connect(function(_, plot)
+		evictVisitors(plot, nil)
 		clear(plot)
 	end)
 	Net.Function("SetHomePublic").OnServerInvoke = function(player, value)
+		local now = os.clock()
+		if lastRequest[player] and now - lastRequest[player] < 0.5 then
+			return false, "少し待ってからどうぞ"
+		end
+		lastRequest[player] = now
 		local profile = DataService.Get(player)
 		if not profile or type(value) ~= "boolean" then
 			return false, "設定できませんでした"
 		end
 		profile.homePublic = value
 		DataService.Changed(player)
-		HomeService.Render(player)
+		local plot = PlotService.Get(player)
+		if plot then
+			plot.model:SetAttribute("HomePublic", value)
+			if not value then
+				evictVisitors(plot, player)
+			end
+		end
 		return true, if value then "自宅を公開しました" else "自宅を非公開にしました"
 	end
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil
-		likedBy[player] = nil
 	end)
 end
 

@@ -126,7 +126,7 @@ local function makeCustomer(position: Vector3, rich: boolean): Customer
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.new(0, 190, 0, 44)
-	billboard.StudsOffset = Vector3.new(0, 2, 0)
+	billboard.StudsOffset = Vector3.new(0, if rich then 3.6 else 2, 0) -- お金持ちは帽子が高いので上に
 	billboard.MaxDistance = 60
 	billboard.LightInfluence = 0
 	local bubble = Instance.new("TextLabel")

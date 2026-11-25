@@ -196,6 +196,8 @@ function HomePanel.Start()
 		busy = false
 		if ok then
 			toast(tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
+		else
+			toast("通信に失敗しました", UI.Colors.Accent)
 		end
 	end)
 

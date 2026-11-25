@@ -31,6 +31,7 @@ export type Profile = {
 	designSales: { [string]: number }, -- デザインごとの売れた数
 	homePublic: boolean, -- 自宅を他の人に公開するか
 	homeLikes: number, -- 自宅がもらった「いいね」の数
+	homeLikedBy: { [string]: boolean }, -- いいねしてくれた人の UserId
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -80,6 +81,7 @@ local function defaultProfile(): Profile
 		designSales = {},
 		homePublic = true,
 		homeLikes = 0,
+		homeLikedBy = {},
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,
