@@ -70,6 +70,27 @@ local function pick(profile: any): (string?, string?, string?)
 	if #options == 0 then
 		return nil, nil, nil
 	end
+	-- 今の棚の商品でそのまま達成できる注文はなるべく避ける（新しく作る理由にする）
+	local onShelf: { [string]: boolean } = {}
+	for _, shelf in profile.shelves do
+		local design = profile.designs[shelf.designId]
+		if design and (profile.stock[shelf.designId] or 0) > 0 then
+			for _, part in design.parts do
+				onShelf["color:" .. part.color] = true
+				onShelf["shape:" .. part.shape] = true
+				onShelf["material:" .. part.material] = true
+			end
+		end
+	end
+	local fresh = {}
+	for _, option in options do
+		if not onShelf[option[1] .. ":" .. option[2]] then
+			table.insert(fresh, option)
+		end
+	end
+	if #fresh > 0 and random:NextNumber() < 0.8 then
+		options = fresh
+	end
 	local choice = options[random:NextInteger(1, #options)]
 	return choice[1], choice[2], choice[3]
 end
