@@ -19,6 +19,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local saveRemote = Net.Function("SaveDesign")
 local deleteRemote = Net.Function("DeleteDesign")
+local craftRemote = Net.Function("CraftItem")
 
 local editing: any = nil -- 編集中のデザイン { name, parts }
 local editId: string? = nil -- 保存済みデザインを編集中ならその ID
@@ -36,6 +37,7 @@ local previewModel: Model? = nil
 local nameBox: TextBox
 local infoLabel: TextLabel
 local deleteButton: TextButton
+local craftButton: TextButton
 local orbitAngle = 0
 local orbitDistance = 10
 local orbitHeight = 1
@@ -345,7 +347,18 @@ end
 local function updateInfo()
 	local value = ItemBuilder.Value(editing)
 	local cost = ItemBuilder.CraftCost(editing)
-	infoLabel.Text = ("価値 約%d コイン ・ 1個作るのに %d コイン"):format(value, cost)
+	local stock = 0
+	local profile = State.profile
+	if editId and profile and profile.stock[editId] then
+		stock = profile.stock[editId]
+	end
+	if editId then
+		infoLabel.Text = ("価値 約%d ・ 製作 %d コイン ・ 在庫 %d"):format(value, cost, stock)
+	else
+		infoLabel.Text = ("価値 約%d ・ 製作 %d コイン（保存すると作れます）"):format(value, cost)
+	end
+	craftButton.Visible = editId ~= nil
+	craftButton.Text = ("1個作る（%d）"):format(cost)
 	deleteButton.Visible = editId ~= nil
 	deleteButton.Text = if deleteArmed then "本当に消す？" else "消す"
 end
@@ -385,6 +398,35 @@ local function save()
 				refresh()
 			end
 		end)
+	else
+		toast(tostring(message), UI.Colors.Accent)
+	end
+end
+
+local function craft()
+	if busy or not editId then
+		return
+	end
+	local profile = State.profile
+	local saved = profile and profile.designs[editId]
+	if saved then
+		-- 保存していない変更があるときは、保存したデザインで作ることを知らせる
+		local a = game:GetService("HttpService"):JSONEncode(saved.parts)
+		local b = game:GetService("HttpService"):JSONEncode(editing.parts)
+		if a ~= b then
+			toast("変更が保存されていません。先に「保存」してください", UI.Colors.Accent)
+			return
+		end
+	end
+	busy = true
+	local ok, result, message = pcall(function()
+		return craftRemote:InvokeServer(editId, 1)
+	end)
+	busy = false
+	if not ok then
+		toast("通信に失敗しました", UI.Colors.Accent)
+	elseif result then
+		toast(tostring(message), UI.Colors.Good)
 	else
 		toast(tostring(message), UI.Colors.Accent)
 	end
@@ -537,8 +579,14 @@ local function createGui()
 	local saveButton = UI.Button(right, "保存", UI.Colors.Good, { Size = UDim2.new(0, 96, 0, 40), Position = UDim2.new(1, -96, 1, -88) })
 	saveButton.Activated:Connect(save)
 
+	craftButton = UI.Button(right, "1個作る", UI.Colors.Coin, {
+		Size = UDim2.new(0, 130, 0, 38),
+		Position = UDim2.new(1, -130, 1, -40),
+		TextColor3 = Color3.fromRGB(110, 70, 20),
+	})
+	craftButton.Activated:Connect(craft)
 	infoLabel = UI.Label(right, "", {
-		Size = UDim2.new(1, 0, 0, 28),
+		Size = UDim2.new(1, -138, 0, 28),
 		Position = UDim2.new(0, 0, 1, -40),
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
@@ -607,6 +655,7 @@ function Workshop.Start()
 		if panel.Visible then
 			buildControls()
 			buildDesignList()
+			updateInfo()
 		end
 	end)
 end

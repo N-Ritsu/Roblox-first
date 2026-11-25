@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
+local ShopService = require(script.Parent:WaitForChild("ShopService"))
 
 local DesignService = {}
 
@@ -76,6 +77,7 @@ local function saveDesign(player: Player, raw: any, editId: any): (boolean, stri
 	end
 	profile.designs[id] = design
 	DataService.Changed(player)
+	ShopService.Render(player)
 	return true, id
 end
 
@@ -93,6 +95,7 @@ local function deleteDesign(player: Player, id: any): (boolean, string)
 		end
 	end
 	DataService.Changed(player)
+	ShopService.Render(player)
 	return true, id
 end
 
