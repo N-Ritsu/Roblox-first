@@ -20,6 +20,7 @@ OrderService.FirstDelay = { 90, 150 } -- 入ってから最初の注文まで（
 OrderService.Cooldown = { 180, 360 } -- 注文が終わってから次の注文まで（秒）
 OrderService.BonusBase = 30
 OrderService.BonusPerStar = 10
+OrderService.ReputationBonus = 2
 OrderService.CustomerChance = 0.5 -- 注文中、来店するお客さんが注文した本人である確率
 
 export type Order = {
@@ -147,13 +148,14 @@ function OrderService.OnSale(owner: Player, design: any): boolean
 	orders[owner] = nil
 	schedule(owner, OrderService.Cooldown)
 	DataService.AddCoins(owner, order.bonus)
+	ShopService.AddReputation(owner, OrderService.ReputationBonus) -- 注文に応える店は評判が上がる
 	local profile = DataService.Get(owner)
 	if profile then
 		profile.ordersDone += 1
 		DataService.AddToday(profile, 0, 0, 1)
 		DataService.Changed(owner)
 	end
-	noticeEvent:FireClient(owner, ("注文達成！ 「%s」でボーナス +%d コイン"):format(design.name, order.bonus))
+	noticeEvent:FireClient(owner, ("注文達成！ 「%s」でボーナス +%d コイン、評判アップ"):format(design.name, order.bonus))
 	send(owner)
 	return true
 end
