@@ -385,6 +385,13 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 				ShopService.AddReputation(owner, -1)
 			end
 			if willBuy then
+				ShopService.Log(owner, ("「%s」が %d で売れた%s"):format(design.name, shelf.price, if rich then "（お金持ち）" else ""))
+			elseif shelf.price > ItemBuilder.Value(design) * 2 then
+				ShopService.Log(owner, ("「%s」(%d) は高すぎると帰られた"):format(design.name, shelf.price))
+			else
+				ShopService.Log(owner, ("「%s」(%d) は高いと言われた"):format(design.name, shelf.price))
+			end
+			if willBuy then
 				bought = true
 				profile.stock[shelf.designId] = stock - 1
 				profile.stats.sold += 1
@@ -398,6 +405,7 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 			say(customer, line)
 		else
 			say(customer, "売り切れか…")
+			ShopService.Log(owner, "売り切れの棚を見て帰られた")
 			ShopService.AddReputation(owner, -0.5)
 		end
 		if not pause(1.2, isValid) then

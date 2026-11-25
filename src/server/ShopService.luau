@@ -119,6 +119,21 @@ local function bestSeller(profile: any): string?
 	return bestId
 end
 
+-- お店の記録：最近のお客さんの反応（サーバーのメモリだけ。最新10件をクライアントへ送る）
+ShopService.LogSize = 10
+local logs: { [Player]: { string } } = {}
+local logEvent = Net.Event("ShopLog")
+function ShopService.Log(player: Player, text: string)
+	local list = logs[player] or {}
+	logs[player] = list
+	local t = os.date("!*t", os.time() + 9 * 3600) :: any
+	table.insert(list, 1, ("%02d:%02d %s"):format(t.hour, t.min, text))
+	while #list > ShopService.LogSize do
+		table.remove(list)
+	end
+	logEvent:FireClient(player, list)
+end
+
 -- 店の評判（0〜100）と星（1〜5）
 function ShopService.Stars(player: Player): number
 	local profile = DataService.Get(player)
@@ -476,6 +491,7 @@ local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): 
 	DataService.Changed(buyer)
 	ShopService.Render(seller)
 	saleEvent:FireClient(seller, design.name, price, buyer.DisplayName)
+	ShopService.Log(seller, ("%s さんが「%s」を %d で購入"):format(buyer.DisplayName, design.name, price))
 	return true, ("「%s」を買いました！ 自宅に飾れます"):format(design.name)
 end
 
@@ -730,6 +746,7 @@ function ShopService.Start()
 		flyerUntil[player] = nil
 		lastGift[player] = nil
 		lastGiftTo[player] = nil
+		logs[player] = nil
 	end)
 end
 

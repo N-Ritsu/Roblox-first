@@ -19,6 +19,7 @@ local interiorRemote = Net.Function("SetInterior")
 local sloganRemote = Net.Function("SetSlogan")
 local flyerRemote = Net.Function("BuyFlyer")
 local flyerEnds = 0
+local shopLog: { string } = {}
 local render: () -> ()
 local openSlogan: () -> () = function() end
 
@@ -105,6 +106,19 @@ render = function()
 			invoke(flyerRemote)
 		end
 	end)
+
+	-- お店の記録（一番下）
+	heading("最近のお客さん", 100)
+	if #shopLog == 0 then
+		UI.Label(content, "まだ記録はありません", { Size = UDim2.new(1, -12, 0, 22), LayoutOrder = 101, TextColor3 = UI.Colors.Muted })
+	end
+	for i, line in shopLog do
+		UI.Label(content, line, {
+			Size = UDim2.new(1, -12, 0, 22),
+			LayoutOrder = 100 + i,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		})
+	end
 
 	local sections = {
 		{ kind = "wall", title = "壁の色", list = ShopUpgrades.Walls, current = profile.interior.wall },
@@ -231,6 +245,12 @@ function ShopPanel.Start()
 	end)
 
 	State.Changed:Connect(function()
+		if panel.Visible then
+			render()
+		end
+	end)
+	Net.Event("ShopLog").OnClientEvent:Connect(function(list: { string })
+		shopLog = list
 		if panel.Visible then
 			render()
 		end
