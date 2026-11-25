@@ -38,6 +38,7 @@ export type Profile = {
 	partyDay: number, -- おうちパーティーの報酬を数えている日（日本時間の通し日数）
 	partyCount: number, -- その日に受け取ったパーティー報酬の回数
 	ordersDone: number, -- 達成したお客さんの注文の数
+	today: { day: number, sold: number, earned: number, orders: number }, -- 今日（日本時間）の成績
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -94,6 +95,7 @@ local function defaultProfile(): Profile
 		partyDay = 0,
 		partyCount = 0,
 		ordersDone = 0,
+		today = { day = 0, sold = 0, earned = 0, orders = 0 },
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,
@@ -242,6 +244,21 @@ function DataService.AddCoins(player: Player, amount: number)
 	end
 	profile.coins = math.max(0, math.floor(profile.coins + amount))
 	DataService.Changed(player)
+end
+
+-- 今日（日本時間）の成績に足す。日付が変わっていたら0から数え直す
+function DataService.AddToday(profile: Profile, sold: number, earned: number, orders: number)
+	local day = math.floor((os.time() + 9 * 3600) / 86400)
+	local today = profile.today
+	if today.day ~= day then
+		today.day = day
+		today.sold = 0
+		today.earned = 0
+		today.orders = 0
+	end
+	today.sold += sold
+	today.earned += earned
+	today.orders += orders
 end
 
 -- 足りていれば払って true を返す

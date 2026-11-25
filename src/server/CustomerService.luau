@@ -429,6 +429,7 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 				profile.stats.sold += 1
 				ShopService.RecordSale(profile, shelf.designId, 1)
 				profile.stats.earned += shelf.price
+				DataService.AddToday(profile, 1, shelf.price, 0)
 				DataService.AddCoins(owner, shelf.price)
 				ShopService.Render(owner)
 				saleEvent:FireClient(owner, design.name, shelf.price)

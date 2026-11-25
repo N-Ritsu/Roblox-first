@@ -230,6 +230,7 @@ function ShopService.OfflineSales(player: Player, profile: any)
 	end
 	profile.stats.sold += count
 	profile.stats.earned += earned
+	DataService.AddToday(profile, count, earned, 0)
 	DataService.AddCoins(player, earned)
 	task.delay(5, function()
 		if player.Parent then
@@ -484,6 +485,7 @@ local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): 
 	sellerProfile.stats.sold += 1
 	ShopService.RecordSale(sellerProfile, shelf.designId, 1)
 	sellerProfile.stats.earned += price
+	DataService.AddToday(sellerProfile, 1, price, 0)
 	DataService.AddCoins(seller, price)
 
 	if not targetId then

@@ -150,6 +150,7 @@ function OrderService.OnSale(owner: Player, design: any): boolean
 	local profile = DataService.Get(owner)
 	if profile then
 		profile.ordersDone += 1
+		DataService.AddToday(profile, 0, 0, 1)
 		DataService.Changed(owner)
 	end
 	noticeEvent:FireClient(owner, ("注文達成！ 「%s」でボーナス +%d コイン"):format(design.name, order.bonus))

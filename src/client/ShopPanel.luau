@@ -78,6 +78,26 @@ render = function()
 		end
 	end
 
+	-- 今日の成績（日付が変わっていれば0として表示）
+	local today = profile.today
+	local day = math.floor((workspace:GetServerTimeNow() + 9 * 3600) / 86400)
+	local isToday = type(today) == "table" and today.day == day
+	local todayFrame = UI.Frame(content, {
+		Size = UDim2.new(1, -12, 0, 30),
+		BackgroundColor3 = Color3.fromRGB(255, 240, 190),
+		LayoutOrder = -1,
+	})
+	UI.Corner(todayFrame, 8)
+	UI.Label(
+		todayFrame,
+		("今日の成績　%d個売れた　売上 %d コイン　注文 %d回"):format(
+			if isToday then today.sold else 0,
+			if isToday then today.earned else 0,
+			if isToday then today.orders else 0
+		),
+		{ Size = UDim2.new(1, -12, 1, -6), Position = UDim2.new(0, 6, 0, 3) }
+	)
+
 	local stars = math.clamp(1 + math.floor((profile.reputation or 0) / 25), 1, 5)
 	heading(("お店の評判 %s%s"):format(string.rep("★", stars) .. string.rep("☆", 5 - stars), if stars < 5 then "（相場くらいの値段で売ると上がる）" else ""), 0)
 	heading(("陳列台：%d / %d 台"):format(profile.shelfSlots, ShopUpgrades.BaseShelves + #ShopUpgrades.ShelfPrices), 1)
