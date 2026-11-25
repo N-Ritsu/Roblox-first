@@ -145,12 +145,14 @@ render = function()
 		{ kind = "floor", title = "床", list = ShopUpgrades.Floors, current = profile.interior.floor },
 		{ kind = "awning", title = "ひさしの色", list = ShopUpgrades.Awnings, current = profile.interior.awning or "Default" },
 		{ kind = "sign", title = "看板の色", list = ShopUpgrades.Signs, current = profile.interior.sign or "Default" },
+		{ kind = "homeWall", title = "自宅の壁（お店で買った色も使える）", list = ShopUpgrades.HomeWalls, current = profile.interior.homeWall or "Default" },
+		{ kind = "homeFloor", title = "自宅の床", list = ShopUpgrades.HomeFloors, current = profile.interior.homeFloor or "Default" },
 	}
 	for i, section in sections do
 		heading(section.title, 10 * i)
 		local frame = grid(10 * i + 1)
 		for j, entry in section.list do
-			local owned = entry.price == 0 or profile.ownedInterior[section.kind .. ":" .. entry.id] == true
+			local owned = entry.price == 0 or profile.ownedInterior[ShopUpgrades.OwnedKind[section.kind] .. ":" .. entry.id] == true
 			local isCurrent = section.current == entry.id
 			local text = if isCurrent then entry.name .. " ✓" elseif owned then entry.name else ("%s %d"):format(entry.name, entry.price)
 			local color = entry.color or Color3.fromRGB(205, 150, 110) -- ひさしの「はじめの色」は色なし

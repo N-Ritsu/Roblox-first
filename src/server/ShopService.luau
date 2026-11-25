@@ -525,17 +525,29 @@ local function buyShelfSlot(player: Player): (boolean, string)
 	return true, "店頭に陳列台を増やしました！"
 end
 
+local homeChanged = Instance.new("BindableEvent")
+ShopService.HomeInteriorChanged = homeChanged.Event -- (player)
+
 local function setInterior(player: Player, kind: any, id: any): (boolean, string)
 	local profile = DataService.Get(player)
 	if not profile then
 		return false, "データを読み込み中です"
 	end
-	local list = if kind == "wall" then ShopUpgrades.WallById elseif kind == "floor" then ShopUpgrades.FloorById elseif kind == "awning" then ShopUpgrades.AwningById elseif kind == "sign" then ShopUpgrades.SignById else nil
-	local entry = list and type(id) == "string" and (list :: any)[id]
+	local lists = {
+		wall = ShopUpgrades.WallById,
+		floor = ShopUpgrades.FloorById,
+		awning = ShopUpgrades.AwningById,
+		sign = ShopUpgrades.SignById,
+		homeWall = ShopUpgrades.HomeWallById,
+		homeFloor = ShopUpgrades.HomeFloorById,
+	} :: { [string]: any }
+	local list = if type(kind) == "string" then lists[kind] else nil
+	local entry = list and type(id) == "string" and list[id]
 	if not entry then
 		return false, "見つかりません"
 	end
-	local ownedKey = kind .. ":" .. id
+	-- 壁・床はお店と自宅で同じ記録を使う（一度買えば両方で使える）
+	local ownedKey = ShopUpgrades.OwnedKind[kind] .. ":" .. id
 	if entry.price > 0 and not profile.ownedInterior[ownedKey] then
 		if not DataService.TrySpend(player, entry.price) then
 			return false, ("コインが足りません（%d コイン必要）"):format(entry.price)
@@ -545,6 +557,9 @@ local function setInterior(player: Player, kind: any, id: any): (boolean, string
 	(profile.interior :: any)[kind] = id
 	DataService.Changed(player)
 	ShopService.Render(player)
+	if kind == "homeWall" or kind == "homeFloor" then
+		homeChanged:Fire(player) -- 自宅の見た目は HomeService が描き直す（HomeService は ShopService を読み込むので逆向きはイベントで）
+	end
 	return true, ("「%s」にしました"):format(entry.name)
 end
 

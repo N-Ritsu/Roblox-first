@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
+local ShopUpgrades = require(Shared:WaitForChild("ShopUpgrades"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local PlotService = require(script.Parent:WaitForChild("PlotService"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
@@ -74,6 +75,46 @@ local function setLikes(plot: PlotService.Plot, likes: number)
 	end
 end
 
+-- 自宅の壁・床の色（nil ならはじめの色）
+local function applyInterior(plot: PlotService.Plot, wallId: string?, floorId: string?)
+	local home = plot.model:FindFirstChild("Home")
+	if not home then
+		return
+	end
+	local wall = ShopUpgrades.HomeWallById[wallId or "Default"] or ShopUpgrades.HomeWalls[1]
+	for _, name in { "WallBack", "WallFront", "WallLeft", "WallRight" } do
+		local part = home:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			if part:GetAttribute("DefaultColor") == nil then
+				part:SetAttribute("DefaultColor", part.Color)
+			end
+			local color = wall.color or part:GetAttribute("DefaultColor")
+			if typeof(color) == "Color3" then
+				part.Color = color
+			end
+		end
+	end
+	local floor = ShopUpgrades.HomeFloorById[floorId or "Default"] or ShopUpgrades.HomeFloors[1]
+	local floorPart = home:FindFirstChild("Floor")
+	if floorPart and floorPart:IsA("BasePart") then
+		if floorPart:GetAttribute("DefaultColor") == nil then
+			floorPart:SetAttribute("DefaultColor", floorPart.Color)
+			floorPart:SetAttribute("DefaultMaterial", floorPart.Material.Name)
+		end
+		local color = floor.color or floorPart:GetAttribute("DefaultColor")
+		if typeof(color) == "Color3" then
+			floorPart.Color = color
+		end
+		local materialName = if floor.material then floor.material.Name else floorPart:GetAttribute("DefaultMaterial")
+		local ok, material = pcall(function()
+			return (Enum.Material :: any)[materialName]
+		end)
+		if ok and material then
+			floorPart.Material = material
+		end
+	end
+end
+
 function HomeService.Render(player: Player)
 	local plot = PlotService.Get(player)
 	local profile = DataService.Get(player)
@@ -85,6 +126,7 @@ function HomeService.Render(player: Player)
 	plot.model:SetAttribute("HomePublic", profile.homePublic) -- クライアントのドアの表示に使う
 	setExtraCells(plot, profile.homeExpanded)
 	setLikes(plot, profile.homeLikes)
+	applyInterior(plot, profile.interior.homeWall, profile.interior.homeFloor)
 	for key, placed in profile.home do
 		local spot = placement(key, profile.homeExpanded)
 		local design = profile.designs[placed.designId]
@@ -102,6 +144,7 @@ local function clear(plot: PlotService.Plot)
 	plot.model:SetAttribute("HomePublic", nil)
 	setLikes(plot, 0)
 	setExtraCells(plot, false)
+	applyInterior(plot, nil, nil)
 	local home = plot.model:FindFirstChild("Home")
 	local folder = home and home:FindFirstChild("Decor")
 	if folder then
@@ -347,6 +390,9 @@ function HomeService.Start()
 	end
 
 	PlotService.Assigned:Connect(function(player)
+		HomeService.Render(player)
+	end)
+	ShopService.HomeInteriorChanged:Connect(function(player)
 		HomeService.Render(player)
 	end)
 	DataService.OnLoaded(function(player)

@@ -43,6 +43,23 @@ ShopUpgrades.Awnings = {
 	{ id = "Gold", name = "金", color = Color3.fromRGB(240, 190, 60), price = 200 },
 } :: { AwningStyle }
 
+-- 自宅の壁・床：お店と同じ選択肢を使い、一度買えばお店と自宅の両方で使える
+-- "Default" は自宅のはじめの色（color = nil）
+ShopUpgrades.HomeWalls = { { id = "Default", name = "はじめの色", color = nil, price = 0 } } :: { any }
+for i, entry in ShopUpgrades.Walls do
+	if i > 1 then
+		table.insert(ShopUpgrades.HomeWalls, entry)
+	end
+end
+ShopUpgrades.HomeFloors = { { id = "Default", name = "はじめの床", color = nil, price = 0 } } :: { any }
+for i, entry in ShopUpgrades.Floors do
+	if i > 1 then
+		table.insert(ShopUpgrades.HomeFloors, entry)
+	end
+end
+-- 持っているかの記録（ownedInterior のキー）に使う種類名
+ShopUpgrades.OwnedKind = { wall = "wall", floor = "floor", awning = "awning", sign = "sign", homeWall = "wall", homeFloor = "floor" } :: { [string]: string }
+
 -- 看板の板の色（文字は明るさに合わせて白か黒になる）
 export type SignStyle = { id: string, name: string, color: Color3, price: number }
 ShopUpgrades.Signs = {
@@ -67,6 +84,8 @@ ShopUpgrades.WallById = index(ShopUpgrades.Walls)
 ShopUpgrades.FloorById = index(ShopUpgrades.Floors)
 ShopUpgrades.AwningById = index(ShopUpgrades.Awnings)
 ShopUpgrades.SignById = index(ShopUpgrades.Signs)
+ShopUpgrades.HomeWallById = index(ShopUpgrades.HomeWalls)
+ShopUpgrades.HomeFloorById = index(ShopUpgrades.HomeFloors)
 
 -- 次の陳列台の値段（もう増やせなければ nil）
 -- 背景色の上で読みやすい文字色
