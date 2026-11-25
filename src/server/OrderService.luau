@@ -32,6 +32,9 @@ export type Order = {
 }
 
 local orders: { [Player]: Order } = {}
+local streaks: { [Player]: number } = {} -- 続けて達成した回数（期限切れで0に戻る。セーブしない）
+OrderService.StreakStep = 10
+OrderService.StreakMax = 50
 local nextOrderAt: { [Player]: number } = {}
 local random = Random.new()
 local orderEvent = Net.Event("Order")
@@ -105,7 +108,9 @@ local function tick()
 			if order and now >= order.expires then
 				orders[player] = nil
 				schedule(player, OrderService.Cooldown)
-				noticeEvent:FireClient(player, "注文の期限が過ぎました。また次の注文を待とう")
+				local hadStreak = (streaks[player] or 0) >= 1
+				streaks[player] = 0
+				noticeEvent:FireClient(player, if hadStreak then "注文の期限が過ぎて、連続達成が途切れました" else "注文の期限が過ぎました。また次の注文を待とう")
 				send(player)
 			elseif not order then
 				if not nextOrderAt[player] then
@@ -118,7 +123,9 @@ local function tick()
 							field = field,
 							id = id,
 							label = label,
-							bonus = OrderService.BonusBase + OrderService.BonusPerStar * ShopService.Stars(player),
+							-- 続けて達成していると上乗せ（2回目から+10ずつ、最大+50）
+							bonus = OrderService.BonusBase + OrderService.BonusPerStar * ShopService.Stars(player)
+								+ math.min((streaks[player] or 0) * OrderService.StreakStep, OrderService.StreakMax),
 							expires = now + OrderService.Duration,
 						}
 						noticeEvent:FireClient(player, ("注文が届いた！ %sを売るとボーナス +%d"):format(label, orders[player].bonus))
@@ -147,6 +154,7 @@ function OrderService.OnSale(owner: Player, design: any): boolean
 	end
 	orders[owner] = nil
 	schedule(owner, OrderService.Cooldown)
+	streaks[owner] = (streaks[owner] or 0) + 1
 	DataService.AddCoins(owner, order.bonus)
 	ShopService.AddReputation(owner, OrderService.ReputationBonus) -- 注文に応える店は評判が上がる
 	local profile = DataService.Get(owner)
@@ -155,7 +163,11 @@ function OrderService.OnSale(owner: Player, design: any): boolean
 		DataService.AddToday(profile, 0, 0, 1)
 		DataService.Changed(owner)
 	end
-	noticeEvent:FireClient(owner, ("注文達成！ 「%s」でボーナス +%d コイン、評判アップ"):format(design.name, order.bonus))
+	local streak = streaks[owner]
+	local streakText = if streak >= 2
+		then ("（%d回連続！%s）"):format(streak, if streak * OrderService.StreakStep <= OrderService.StreakMax then " 次はもっと上乗せ" else "")
+		else ""
+	noticeEvent:FireClient(owner, ("注文達成！ 「%s」でボーナス +%d コイン、評判アップ%s"):format(design.name, order.bonus, streakText))
 	send(owner)
 	return true
 end
@@ -174,6 +186,7 @@ function OrderService.Start()
 	Players.PlayerRemoving:Connect(function(player)
 		orders[player] = nil
 		nextOrderAt[player] = nil
+		streaks[player] = nil
 	end)
 	task.spawn(function()
 		while true do
