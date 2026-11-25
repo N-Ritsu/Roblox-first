@@ -186,7 +186,7 @@ local function createGui()
 		Position = UDim2.new(0, 12, 1, -94),
 	})
 	priceBox = Instance.new("TextBox")
-	priceBox.Size = UDim2.new(1, -300, 0, 40)
+	priceBox.Size = UDim2.new(0.5, -72, 0, 40) -- 狭い画面でもつぶれないよう、右半分をボタンに使う
 	priceBox.Position = UDim2.new(0, 72, 1, -94)
 	priceBox.BackgroundColor3 = Color3.new(1, 1, 1)
 	priceBox.Font = UI.Font
@@ -202,8 +202,8 @@ local function createGui()
 	local presets = { { text = "安め", rate = 0.9 }, { text = "相場", rate = 1 }, { text = "高め", rate = 1.3 } }
 	for i, preset in presets do
 		local button = UI.Button(panel, preset.text, Color3.fromRGB(205, 150, 110), {
-			Size = UDim2.new(0, 66, 0, 40),
-			Position = UDim2.new(1, -12 - (4 - i) * 70, 1, -94),
+			Size = UDim2.new(1 / 6, -6, 0, 40),
+			Position = UDim2.new(0.5 + (i - 1) / 6, 2, 1, -94),
 		})
 		button.Activated:Connect(function()
 			local profile = State.profile
