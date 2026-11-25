@@ -32,6 +32,11 @@ Catalog.Colors = {
 	{ id = "Mint", name = "ミント", color = Color3.fromRGB(150, 235, 200), unlockPrice = 100, value = 1.2 },
 	{ id = "Gold", name = "金", color = Color3.fromRGB(240, 190, 60), unlockPrice = 300, value = 1.5 },
 	{ id = "Silver", name = "銀", color = Color3.fromRGB(190, 195, 205), unlockPrice = 200, value = 1.4 },
+	{ id = "Teal", name = "ティール", color = Color3.fromRGB(40, 160, 160), unlockPrice = 80, value = 1.15 },
+	{ id = "Navy", name = "ネイビー", color = Color3.fromRGB(35, 55, 120), unlockPrice = 80, value = 1.15 },
+	{ id = "Beige", name = "ベージュ", color = Color3.fromRGB(225, 205, 170), unlockPrice = 60, value = 1.1 },
+	{ id = "Lime", name = "ライム", color = Color3.fromRGB(170, 230, 70), unlockPrice = 80, value = 1.15 },
+	{ id = "Coral", name = "コーラル", color = Color3.fromRGB(250, 125, 105), unlockPrice = 100, value = 1.2 },
 	{ id = "SnowWhite", name = "雪白", color = Color3.fromRGB(248, 252, 255), unlockPrice = 150, value = 1.4, season = "winter" },
 	{ id = "Holly", name = "ヒイラギ緑", color = Color3.fromRGB(30, 115, 60), unlockPrice = 150, value = 1.4, season = "winter" },
 	{ id = "Berry", name = "ヒイラギ赤", color = Color3.fromRGB(185, 25, 45), unlockPrice = 150, value = 1.4, season = "winter" },
@@ -47,6 +52,11 @@ Catalog.Materials = {
 	{ id = "Metal", name = "金属", material = Enum.Material.Metal, unlockPrice = 150, value = 1.4 },
 	{ id = "Glass", name = "ガラス", material = Enum.Material.Glass, unlockPrice = 250, value = 1.6 },
 	{ id = "Neon", name = "ネオン", material = Enum.Material.Neon, unlockPrice = 400, value = 2 },
+	{ id = "Sand", name = "砂", material = Enum.Material.Sand, unlockPrice = 100, value = 1.25 },
+	{ id = "Cobblestone", name = "石畳", material = Enum.Material.Cobblestone, unlockPrice = 120, value = 1.3 },
+	{ id = "Granite", name = "花こう岩", material = Enum.Material.Granite, unlockPrice = 180, value = 1.4 },
+	{ id = "Ice", name = "氷", material = Enum.Material.Ice, unlockPrice = 220, value = 1.5 },
+	{ id = "Foil", name = "ホイル", material = Enum.Material.Foil, unlockPrice = 300, value = 1.7 },
 } :: { MaterialEntry }
 
 local function index<T>(list: { T }): { [string]: T }

@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
 local Theme = require(Shared:WaitForChild("Theme"))
+local Season = require(Shared:WaitForChild("Season"))
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
@@ -241,6 +242,9 @@ local function pickPreference(): Preference?
 	local roll = random:NextNumber()
 	if roll < 0.5 then
 		local entry = Catalog.Colors[random:NextInteger(1, #Catalog.Colors)]
+		if entry.season and not Season.IsActive(entry.season) then
+			return nil -- 期間外の限定色は好みに出さない
+		end
 		return { field = "color", id = entry.id, text = ("「%s」のものがほしいな"):format(entry.name) }
 	elseif roll < 0.8 then
 		local entry = Catalog.Shapes[random:NextInteger(1, #Catalog.Shapes)]
