@@ -303,6 +303,33 @@ local function buildControls()
 
 	-- 色
 	local colorGrid = section("色", UDim2.new(0, 36, 0, 36))
+	-- おまかせ配色：解放済みの色から、全部の部品の色をまとめてランダムに（気に入らなければ「元に戻す」）
+	local shuffle = UI.Button(colorGrid, "🎲", Color3.fromRGB(150, 110, 210), { LayoutOrder = 0 })
+	shuffle.Activated:Connect(function()
+		local owned = {}
+		for _, color in Catalog.Colors do
+			if unlocked("colors", color.id) then
+				table.insert(owned, color.id)
+			end
+		end
+		if #owned < 2 then
+			return
+		end
+		-- 2〜3色の組み合わせにして、まとまりのある見た目にする
+		local palette = {}
+		local count = math.min(#owned, math.random(2, 3))
+		while #palette < count do
+			local id = owned[math.random(1, #owned)]
+			if not table.find(palette, id) then
+				table.insert(palette, id)
+			end
+		end
+		for _, p in editing.parts do
+			p.color = palette[math.random(1, #palette)]
+		end
+		refresh()
+		toast("おまかせ配色！ 気に入らなければ「元に戻す」で戻せます")
+	end)
 	for i, color in Catalog.Colors do
 		local isUnlocked = unlocked("colors", color.id)
 		if color.season and not isUnlocked and not Season.IsActive(color.season) then
