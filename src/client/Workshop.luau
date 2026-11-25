@@ -367,7 +367,9 @@ local function buildDesignList()
 	for i, id in ids do
 		local design = profile.designs[id]
 		local active = id == editId
-		local button = UI.Button(designList, design.name, if active then UI.Colors.Good else Color3.fromRGB(205, 150, 110), {
+		local sales = profile.designSales and profile.designSales[id] or 0
+		local label = if sales > 0 then ("%s（%d個売れた）"):format(design.name, sales) else design.name
+		local button = UI.Button(designList, label, if active then UI.Colors.Good else Color3.fromRGB(205, 150, 110), {
 			Size = UDim2.new(1, -8, 0, 30),
 			LayoutOrder = i + 1,
 		})

@@ -92,7 +92,8 @@ local function render()
 		if active then
 			UI.Stroke(row, UI.Colors.Good, 2)
 		end
-		local pick = UI.Button(row, ("%s（在庫 %d）"):format(design.name, stock), Color3.new(1, 1, 1), {
+		local sales = profile.designSales and profile.designSales[id] or 0
+		local pick = UI.Button(row, ("%s（在庫 %d・売れた数 %d）"):format(design.name, stock, sales), Color3.new(1, 1, 1), {
 			Size = UDim2.new(1, -120, 1, -6),
 			Position = UDim2.new(0, 4, 0, 3),
 			BackgroundTransparency = 1,

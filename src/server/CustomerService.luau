@@ -342,6 +342,7 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 				bought = true
 				profile.stock[shelf.designId] = stock - 1
 				profile.stats.sold += 1
+				ShopService.RecordSale(profile, shelf.designId, 1)
 				profile.stats.earned += shelf.price
 				DataService.AddCoins(owner, shelf.price)
 				ShopService.Render(owner)

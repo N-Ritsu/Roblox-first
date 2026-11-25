@@ -138,6 +138,7 @@ local function deleteDesign(player: Player, id: any): (boolean, string)
 	end
 	profile.designs[id] = nil
 	profile.stock[id] = nil
+	profile.designSales[id] = nil
 	-- 棚に並べていたら外す
 	for slot, shelf in profile.shelves do
 		if shelf.designId == id then

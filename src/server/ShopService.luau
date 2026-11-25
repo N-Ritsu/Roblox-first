@@ -93,6 +93,22 @@ local function clearDisplays(plot: PlotService.Plot)
 	applyLayout(plot, ShopUpgrades.BaseShelves, ShopUpgrades.Walls[1].id, ShopUpgrades.Floors[1].id)
 end
 
+-- デザインごとの売れた数を記録する
+function ShopService.RecordSale(profile: any, designId: string, count: number)
+	profile.designSales[designId] = (profile.designSales[designId] or 0) + count
+end
+
+-- 一番売れているデザイン（3個以上売れていれば）
+local function bestSeller(profile: any): string?
+	local bestId, bestCount = nil, 2
+	for id, count in profile.designSales do
+		if count > bestCount and profile.designs[id] then
+			bestId, bestCount = id, count
+		end
+	end
+	return bestId
+end
+
 -- 店の評判（0〜100）と星（1〜5）
 function ShopService.Stars(player: Player): number
 	local profile = DataService.Get(player)
@@ -166,6 +182,7 @@ function ShopService.OfflineSales(player: Player, profile: any)
 			local chance = if shelf.price <= value then 0.8 elseif shelf.price <= value * 1.3 then 0.5 elseif shelf.price <= value * 1.6 then 0.2 else 0
 			if random:NextNumber() < chance then
 				profile.stock[shelf.designId] = stock - 1
+				ShopService.RecordSale(profile, shelf.designId, 1)
 				count += 1
 				earned += shelf.price
 			end
@@ -203,6 +220,7 @@ function ShopService.Render(player: Player)
 	end
 	plot.model:SetAttribute("OnSale", onSale)
 	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor)
+	local best = bestSeller(profile)
 	updateSign(player)
 	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
 		local shelf = profile.shelves[tostring(slot)]
@@ -259,6 +277,23 @@ function ShopService.Render(player: Player)
 			priceLabel.TextColor3 = if stock > 0 then Color3.fromRGB(210, 140, 20) else Color3.fromRGB(120, 120, 120)
 			priceLabel.Text = if stock > 0 then ("%d コイン（残り%d）"):format(shelf.price, stock) else "売り切れ"
 			priceLabel.Parent = bg
+			if shelf.designId == best then
+				-- 一番売れている商品の札
+				local badge = nameLabel:Clone()
+				badge.Name = "BestSeller"
+				badge.Size = UDim2.new(0, 90, 0, 22)
+				badge.Position = UDim2.new(0.5, -45, 0, -24)
+				badge.BackgroundTransparency = 0
+				badge.BackgroundColor3 = Color3.fromRGB(240, 90, 80)
+				badge.TextColor3 = Color3.new(1, 1, 1)
+				badge.Text = "人気No.1"
+				local badgeCorner = Instance.new("UICorner")
+				badgeCorner.CornerRadius = UDim.new(0, 8)
+				badgeCorner.Parent = badge
+				badge.Parent = bg
+				billboard.Size = UDim2.new(0, 150, 0, 54)
+				billboard.ClipsDescendants = false
+			end
 			bg.Parent = billboard
 			billboard.Parent = tag
 
@@ -398,6 +433,7 @@ local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): 
 	end
 	sellerProfile.stock[shelf.designId] = stock - 1
 	sellerProfile.stats.sold += 1
+	ShopService.RecordSale(sellerProfile, shelf.designId, 1)
 	sellerProfile.stats.earned += price
 	DataService.AddCoins(seller, price)
 
