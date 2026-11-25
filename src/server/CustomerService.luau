@@ -52,7 +52,7 @@ type Customer = {
 
 local active: { [number]: number } = {} -- 区画番号 → 店内にいるお客さんの数
 
-local function makeCustomer(position: Vector3, rich: boolean): Customer
+local function makeCustomer(position: Vector3, rich: boolean, scale: number?): Customer
 	local model = Instance.new("Model")
 	model.Name = "Customer"
 	local base = CFrame.new(position)
@@ -146,6 +146,9 @@ local function makeCustomer(position: Vector3, rich: boolean): Customer
 	bubble.Parent = billboard
 	billboard.Parent = head
 
+	if scale and scale ~= 1 then
+		model:ScaleTo(scale) -- 子どもは小さく（足元を基準に縮む）
+	end
 	model.Parent = folder
 	return { model = model, bubble = bubble, position = position, facing = Vector3.new(0, 0, -1) }
 end
@@ -270,10 +273,28 @@ end
 CustomerService.RichChance = 0.08
 CustomerService.RichWillingnessRange = { 1.3, 2.1 }
 
-local function decide(design: any, price: number, preference: Preference?, rich: boolean): (boolean, string)
+-- お客さんの種類：rich（お金持ち）／child（子ども：安いもの好き）／collector（コレクター：部品の多いもの好き）
+CustomerService.ChildChance = 0.12
+CustomerService.CollectorChance = 0.1
+CustomerService.ChildCheapPrice = 25 -- 子どもはこれ以下の値段だと喜んで買う
+CustomerService.CollectorMinParts = 5 -- コレクターはこれ以上の部品のアイテムが好き
+
+local function decide(design: any, price: number, preference: Preference?, rich: boolean, kind: string?): (boolean, string)
 	local value = ItemBuilder.Value(design)
 	local range = if rich then CustomerService.RichWillingnessRange else CustomerService.WillingnessRange
 	local willing = value * random:NextNumber(range[1], range[2])
+	if kind == "child" then
+		if price <= CustomerService.ChildCheapPrice then
+			willing *= 1.5
+		else
+			willing *= 0.7 -- おこづかいが少ない
+		end
+	elseif kind == "collector" and #design.parts >= CustomerService.CollectorMinParts then
+		willing *= 1.6
+		if price <= willing then
+			return true, "見事なつくりだ！コレクションに加えよう"
+		end
+	end
 	local liked = matches(design, preference)
 	if liked then
 		willing *= CustomerService.PreferenceBonus
@@ -308,8 +329,13 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 
 	local side = if random:NextNumber() < 0.5 then -1 else 1
 	local start = world(Vector3.new(side * 16, 0.6, -11))
-	local rich = random:NextNumber() < CustomerService.RichChance
-	local customer = makeCustomer(start, rich)
+	local roll = random:NextNumber()
+	local rich = roll < CustomerService.RichChance
+	local kind: string? = if rich then "rich"
+		elseif roll < CustomerService.RichChance + CustomerService.ChildChance then "child"
+		elseif roll < CustomerService.RichChance + CustomerService.ChildChance + CustomerService.CollectorChance then "collector"
+		else nil
+	local customer = makeCustomer(start, rich, if kind == "child" then 0.7 else 1)
 	ctx.model = customer.model
 	local function finish()
 		customer.model:Destroy()
@@ -320,10 +346,14 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 	end
 
 	-- 店の前まで来る。好みがあれば吹き出しで教えてくれる
-	local preference = if rich then nil else pickPreference()
+	local preference = if kind then nil else pickPreference()
 	if rich then
 		say(customer, "いい品はあるかね？")
 		noticeEvent:FireClient(owner, "お金持ちのお客さんが来た！")
+	elseif kind == "child" then
+		say(customer, ("%d コインくらいで買えるものある？"):format(CustomerService.ChildCheapPrice))
+	elseif kind == "collector" then
+		say(customer, ("部品が%d個以上の凝った品を探しています"):format(CustomerService.CollectorMinParts))
 	elseif preference then
 		say(customer, preference.text)
 	end
@@ -377,7 +407,7 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 		local design = shelf and profile.designs[shelf.designId]
 		local stock = shelf and profile.stock[shelf.designId] or 0
 		if shelf and design and stock > 0 then
-			local willBuy, line = decide(design, shelf.price, preference, rich)
+			local willBuy, line = decide(design, shelf.price, preference, rich, kind)
 			-- 評判：納得の値段で買えると上がり、高すぎて買えないと下がる
 			if willBuy then
 				ShopService.AddReputation(owner, if rich then 3 elseif shelf.price <= ItemBuilder.Value(design) * 1.1 then 2 else 1)
