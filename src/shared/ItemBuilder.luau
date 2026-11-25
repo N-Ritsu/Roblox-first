@@ -19,7 +19,19 @@ export type Design = {
 
 local ItemBuilder = {}
 
-ItemBuilder.MaxParts = 6
+ItemBuilder.MaxParts = 6 -- 最初に使える部品の数
+ItemBuilder.PartLimitSteps = { { limit = 8, price = 500 }, { limit = 10, price = 1200 } } -- コインで増やせる上限
+ItemBuilder.AbsoluteMaxParts = 10
+
+-- 今の上限から次に増やせる段階（なければ nil）
+function ItemBuilder.NextPartLimit(current: number): { limit: number, price: number }?
+	for _, step in ItemBuilder.PartLimitSteps do
+		if step.limit > current then
+			return step
+		end
+	end
+	return nil
+end
 ItemBuilder.MaxNameLength = 20
 ItemBuilder.SizeMin = 0.5
 ItemBuilder.SizeMax = 4
@@ -71,7 +83,8 @@ function ItemBuilder.NewPart(): PartData
 end
 
 -- 送られてきたデザインを検証し、整えたものを返す。unlocks を渡すと解放済みかも確認する
-function ItemBuilder.Validate(raw: any, unlocks: any?): (Design?, string?)
+function ItemBuilder.Validate(raw: any, unlocks: any?, maxParts: number?): (Design?, string?)
+	local limit = math.min(maxParts or ItemBuilder.MaxParts, ItemBuilder.AbsoluteMaxParts)
 	if type(raw) ~= "table" or type(raw.parts) ~= "table" then
 		return nil, "デザインの形式が正しくありません"
 	end
@@ -90,8 +103,8 @@ function ItemBuilder.Validate(raw: any, unlocks: any?): (Design?, string?)
 	end
 
 	local count = #raw.parts
-	if count < 1 or count > ItemBuilder.MaxParts then
-		return nil, ("部品は1〜%d個にしてください"):format(ItemBuilder.MaxParts)
+	if count < 1 or count > limit then
+		return nil, ("部品は1〜%d個にしてください"):format(limit)
 	end
 
 	local parts = {}

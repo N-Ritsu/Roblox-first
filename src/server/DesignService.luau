@@ -94,7 +94,7 @@ local function saveDesign(player: Player, raw: any, editId: any): (boolean, stri
 	if not profile then
 		return false, "データを読み込み中です"
 	end
-	local design, err = ItemBuilder.Validate(raw, profile.unlocks)
+	local design, err = ItemBuilder.Validate(raw, profile.unlocks, profile.maxParts)
 	if not design then
 		return false, err or "保存できませんでした"
 	end

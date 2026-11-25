@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
 local Net = require(Shared:WaitForChild("Net"))
 local Season = require(Shared:WaitForChild("Season"))
+local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
 
@@ -16,6 +17,7 @@ local PartShop = {}
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local unlockRemote = Net.Function("Unlock")
+local partLimitRemote = Net.Function("BuyPartLimit")
 
 local TABS = {
 	{ kind = "shapes", name = "形" },
@@ -42,6 +44,39 @@ local function render()
 			child:Destroy()
 		end
 	end
+	-- 部品の数の上限を増やす（どのタブでも一番上に出す）
+	local maxParts = profile.maxParts or ItemBuilder.MaxParts
+	local step = ItemBuilder.NextPartLimit(maxParts)
+	local limitRow = UI.Frame(list, { Size = UDim2.new(1, -12, 0, 44), BackgroundColor3 = Color3.fromRGB(255, 245, 210), LayoutOrder = 0 })
+	UI.Corner(limitRow, 8)
+	UI.Label(limitRow, ("アイテムの部品の数：%d個まで"):format(maxParts), {
+		Size = UDim2.new(1, -170, 1, -10),
+		Position = UDim2.new(0, 10, 0, 5),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	if step then
+		local limitButton = UI.Button(limitRow, ("%d個に（%d）"):format(step.limit, step.price), if profile.coins >= step.price then UI.Colors.Coin else UI.Colors.Muted, {
+			Size = UDim2.new(0, 150, 1, -10),
+			Position = UDim2.new(1, -156, 0, 5),
+			TextColor3 = Color3.fromRGB(110, 70, 20),
+		})
+		limitButton.Activated:Connect(function()
+			if busy then
+				return
+			end
+			busy = true
+			local ok, result, message = pcall(function()
+				return partLimitRemote:InvokeServer()
+			end)
+			busy = false
+			if ok then
+				UI.Toast(playerGui, tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
+			else
+				UI.Toast(playerGui, "通信に失敗しました", UI.Colors.Accent)
+			end
+		end)
+	end
+
 	local tab = TABS[currentTab]
 	local entries = table.clone(Catalog.Kinds[tab.kind])
 	table.sort(entries, function(a, b)

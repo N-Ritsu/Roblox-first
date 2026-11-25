@@ -198,14 +198,15 @@ local function buildControls()
 	local part = parts[selected]
 
 	-- 部品の選択・追加・削除
-	local partsGrid = section(("部品（%d/%d）"):format(#parts, ItemBuilder.MaxParts), UDim2.new(0, 56, 0, 32))
+	local maxParts = if State.profile then State.profile.maxParts or ItemBuilder.MaxParts else ItemBuilder.MaxParts
+	local partsGrid = section(("部品（%d/%d）"):format(#parts, maxParts), UDim2.new(0, 56, 0, 32))
 	for i = 1, #parts do
 		choiceButton(partsGrid, tostring(i), i == selected, true, i, function()
 			selected = i
 			refresh()
 		end)
 	end
-	if #parts < ItemBuilder.MaxParts then
+	if #parts < maxParts then
 		choiceButton(partsGrid, "＋追加", false, true, 100, function()
 			local newPart = ItemBuilder.NewPart()
 			newPart.pos = { 0, math.min(ItemBuilder.PosLimit, part.pos[2] + 1), 0 }

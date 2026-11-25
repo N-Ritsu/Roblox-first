@@ -32,6 +32,7 @@ export type Profile = {
 	homePublic: boolean, -- 自宅を他の人に公開するか
 	homeLikes: number, -- 自宅がもらった「いいね」の数
 	homeLikedBy: { [string]: boolean }, -- いいねしてくれた人の UserId
+	maxParts: number, -- アイテム1つに使える部品の数
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -82,6 +83,7 @@ local function defaultProfile(): Profile
 		homePublic = true,
 		homeLikes = 0,
 		homeLikedBy = {},
+		maxParts = 6,
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,

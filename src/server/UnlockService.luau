@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
 local Net = require(Shared:WaitForChild("Net"))
 local Season = require(Shared:WaitForChild("Season"))
+local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 
 local UnlockService = {}
@@ -45,7 +46,32 @@ local function unlock(player: Player, kind: any, id: any): (boolean, string)
 	return true, ("「%s」を解放しました！"):format(entry.name)
 end
 
+local function buyPartLimit(player: Player): (boolean, string)
+	local profile = DataService.Get(player)
+	if not profile then
+		return false, "データを読み込み中です"
+	end
+	local step = ItemBuilder.NextPartLimit(profile.maxParts)
+	if not step then
+		return false, "これ以上は増やせません"
+	end
+	if not DataService.TrySpend(player, step.price) then
+		return false, ("コインが足りません（%d コイン必要）"):format(step.price)
+	end
+	profile.maxParts = step.limit
+	DataService.Changed(player)
+	return true, ("部品を%d個まで使えるようになりました！"):format(step.limit)
+end
+
 function UnlockService.Start()
+	Net.Function("BuyPartLimit").OnServerInvoke = function(player)
+		local ok, a, b = pcall(buyPartLimit, player)
+		if not ok then
+			warn("[UnlockService] エラー:", a)
+			return false, "エラーが起きました"
+		end
+		return a, b
+	end
 	Net.Function("Unlock").OnServerInvoke = function(player, kind, id)
 		local ok, a, b = pcall(unlock, player, kind, id)
 		if not ok then
