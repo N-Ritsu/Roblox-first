@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Catalog = require(Shared:WaitForChild("Catalog"))
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
@@ -100,7 +101,7 @@ local function makeCustomer(position: Vector3): Customer
 	local _ = body
 
 	local billboard = Instance.new("BillboardGui")
-	billboard.Size = UDim2.new(0, 120, 0, 36)
+	billboard.Size = UDim2.new(0, 190, 0, 44)
 	billboard.StudsOffset = Vector3.new(0, 2, 0)
 	billboard.MaxDistance = 60
 	billboard.LightInfluence = 0
@@ -111,6 +112,7 @@ local function makeCustomer(position: Vector3): Customer
 	bubble.Font = Enum.Font.FredokaOne
 	bubble.TextScaled = true
 	bubble.Text = ""
+	bubble.TextWrapped = true
 	bubble.Visible = false
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 12)
@@ -202,12 +204,52 @@ local function coinBurst(position: Vector3)
 	end)
 end
 
+-- お客さんの好み（なければ nil）。好みに合う商品には多めに払ってくれる
+CustomerService.PreferenceChance = 0.6
+CustomerService.PreferenceBonus = 1.5
+type Preference = { field: string, id: string, text: string }
+
+local function pickPreference(): Preference?
+	if random:NextNumber() > CustomerService.PreferenceChance then
+		return nil
+	end
+	local roll = random:NextNumber()
+	if roll < 0.5 then
+		local entry = Catalog.Colors[random:NextInteger(1, #Catalog.Colors)]
+		return { field = "color", id = entry.id, text = ("「%s」のものがほしいな"):format(entry.name) }
+	elseif roll < 0.8 then
+		local entry = Catalog.Shapes[random:NextInteger(1, #Catalog.Shapes)]
+		return { field = "shape", id = entry.id, text = ("「%s」の入ったものがほしいな"):format(entry.name) }
+	end
+	local entry = Catalog.Materials[random:NextInteger(1, #Catalog.Materials)]
+	return { field = "material", id = entry.id, text = ("「%s」のものがほしいな"):format(entry.name) }
+end
+
+local function matches(design: any, preference: Preference?): boolean
+	if not preference then
+		return false
+	end
+	for _, part in design.parts do
+		if part[preference.field] == preference.id then
+			return true
+		end
+	end
+	return false
+end
+
 -- 商品を見て、買うかどうかと一言を決める
-local function decide(design: any, price: number): (boolean, string)
+local function decide(design: any, price: number, preference: Preference?): (boolean, string)
 	local value = ItemBuilder.Value(design)
 	local range = CustomerService.WillingnessRange
 	local willing = value * random:NextNumber(range[1], range[2])
+	local liked = matches(design, preference)
+	if liked then
+		willing *= CustomerService.PreferenceBonus
+	end
 	if price <= willing then
+		if liked then
+			return true, "これこれ！ほしかったの！"
+		end
 		return true, if price <= value * 0.9 then "安い！買う！" else "これください！"
 	end
 	return false, if price > value * 2 then "高すぎる…" else "うーん、高いなぁ"
@@ -233,10 +275,15 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		return walkTo(customer, world(Vector3.new(x, y, z)), isValid)
 	end
 
-	-- 店の前まで来る
+	-- 店の前まで来る。好みがあれば吹き出しで教えてくれる
+	local preference = pickPreference()
+	if preference then
+		say(customer, preference.text)
+	end
 	if not go(side * 2, 0.6, -10) then
 		return finish()
 	end
+	say(customer, nil)
 
 	-- 在庫のある棚を選ぶ
 	local profile = DataService.Get(owner)
@@ -250,7 +297,16 @@ local function visit(plot: PlotService.Plot, owner: Player)
 			table.insert(candidates, slot)
 		end
 	end
-	local slot = if #candidates > 0 then candidates[random:NextInteger(1, #candidates)] else nil
+	-- 好みに合う商品があれば、そちらを見に行きやすい
+	local liked = {}
+	for _, candidate in candidates do
+		local shelf = profile.shelves[tostring(candidate)]
+		if matches(profile.designs[shelf.designId], preference) then
+			table.insert(liked, candidate)
+		end
+	end
+	local pool = if #liked > 0 and random:NextNumber() < 0.8 then liked else candidates
+	local slot = if #pool > 0 then pool[random:NextInteger(1, #pool)] else nil
 	local indoor = slot == nil or not PlotService.IsOutdoorShelf(slot)
 	if indoor and not go(random:NextNumber(-1.5, 1.5), 0.9, -2) then
 		return finish()
@@ -274,7 +330,7 @@ local function visit(plot: PlotService.Plot, owner: Player)
 		local design = shelf and profile.designs[shelf.designId]
 		local stock = shelf and profile.stock[shelf.designId] or 0
 		if shelf and design and stock > 0 then
-			local willBuy, line = decide(design, shelf.price)
+			local willBuy, line = decide(design, shelf.price, preference)
 			if willBuy then
 				bought = true
 				profile.stock[shelf.designId] = stock - 1
