@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local Guide = {}
 
@@ -134,11 +135,13 @@ function Guide.Start()
 	end)
 
 	Net.Event("DailyBonus").OnClientEvent:Connect(function(streak: number, reward: number, tomorrow: number)
+		Sounds.Play("reward")
 		showDaily(gui, streak, reward, tomorrow)
 	end)
 
 	-- 留守中の売上
 	Net.Event("OfflineSales").OnClientEvent:Connect(function(count: number, earned: number)
+		Sounds.Play("reward")
 		local card = UI.Frame(gui, {
 			AnchorPoint = Vector2.new(0.5, 0),
 			Position = UDim2.new(0.5, 0, 0.72, 0),

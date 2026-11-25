@@ -9,6 +9,7 @@ local Goals = require(Shared:WaitForChild("Goals"))
 local Net = require(Shared:WaitForChild("Net"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local GoalsPanel = {}
 
@@ -77,6 +78,9 @@ local function render()
 				end)
 				busy = false
 				if ok then
+					if result then
+						Sounds.Play("reward")
+					end
 					UI.Toast(playerGui, tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
 				else
 					UI.Toast(playerGui, "通信に失敗しました", UI.Colors.Accent)

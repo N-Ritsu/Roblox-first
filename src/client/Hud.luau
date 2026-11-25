@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local Hud = {}
 
@@ -62,6 +63,7 @@ function Hud.Start()
 
 	-- 商品が売れたときのお知らせ
 	Net.Event("Sale").OnClientEvent:Connect(function(itemName: string, price: number, buyerName: string?)
+		Sounds.Play("sale")
 		if buyerName then
 			UI.Toast(playerGui, ("%s さんが「%s」を買ってくれた！ +%d"):format(buyerName, itemName, price), UI.Colors.Good)
 		else

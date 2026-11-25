@@ -1,6 +1,8 @@
 --!strict
 -- UI 部品を同じ見た目で作るための補助
 
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
+
 local UI = {}
 
 UI.Colors = {
@@ -72,6 +74,9 @@ function UI.Button(parent: Instance, text: string, color: Color3?, props: { [str
 	for k, v in props or {} do
 		(button :: any)[k] = v
 	end
+	button.Activated:Connect(function()
+		Sounds.Play("click")
+	end)
 	button.Parent = parent
 	return button
 end
