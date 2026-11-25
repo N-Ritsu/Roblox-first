@@ -80,7 +80,7 @@ function Hud.Start()
 	local orderFrame = UI.Frame(gui, {
 		Name = "Order",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Size = UDim2.new(0, 300, 0, 44),
+		Size = UDim2.new(0, 260, 0, 44), -- スマホの移動スティック・ジャンプボタンにかからない幅
 		Position = UDim2.new(0.5, 0, 1, -62),
 		BackgroundColor3 = Color3.fromRGB(215, 240, 255),
 		Visible = false,
