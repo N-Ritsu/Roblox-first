@@ -239,6 +239,9 @@ function ShopService.OfflineSales(player: Player, profile: any)
 	end)
 end
 
+ShopService.FeaturedSize = 6
+ShopService.FeaturedOffset = CFrame.new(0, 14.5, 7) -- 屋根の上（看板の後ろ）。区画ローカル
+
 -- 店主の棚の表示を作り直す
 function ShopService.Render(player: Player)
 	local plot = PlotService.Get(player)
@@ -260,6 +263,14 @@ function ShopService.Render(player: Player)
 	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor, profile.interior.awning, profile.interior.sign)
 	local best = bestSeller(profile)
 	updateSign(player)
+	-- 屋根の上の看板商品（クライアントの DecorFun がゆっくり回す）
+	local featured = profile.designs[profile.featured]
+	if featured and not featured.boughtFrom then
+		local item = ItemBuilder.BuildFitted(featured, ShopService.FeaturedSize)
+		item.Name = "Featured"
+		item:PivotTo(plot.origin * ShopService.FeaturedOffset)
+		item.Parent = folder
+	end
 	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
 		local shelf = profile.shelves[tostring(slot)]
 		local design = shelf and profile.designs[shelf.designId]
@@ -716,6 +727,34 @@ local function gift(sender: Player, targetUserId: any, designId: any): (boolean,
 	return true, ("%s さんに「%s」を贈りました！"):format(target.DisplayName, design.name)
 end
 
+-- 屋根の上の看板商品を選ぶ（designId = "" で外す）。自分で作ったデザインだけ
+local lastFeatured: { [Player]: number } = {}
+local function setFeatured(player: Player, designId: any): (boolean, string)
+	local now = os.clock()
+	if lastFeatured[player] and now - lastFeatured[player] < 1 then
+		return false, "少し待ってからどうぞ"
+	end
+	lastFeatured[player] = now
+	local profile = DataService.Get(player)
+	if not profile or type(designId) ~= "string" then
+		return false, "設定できませんでした"
+	end
+	if designId == "" then
+		profile.featured = ""
+		DataService.Changed(player)
+		ShopService.Render(player)
+		return true, "看板商品を外しました"
+	end
+	local design = profile.designs[designId]
+	if not design or design.boughtFrom then
+		return false, "自分で作ったデザインだけ飾れます"
+	end
+	profile.featured = designId
+	DataService.Changed(player)
+	ShopService.Render(player)
+	return true, ("「%s」を屋根の上に飾りました！"):format(design.name)
+end
+
 local function wrap(name: string, fn: (...any) -> (boolean, string))
 	Net.Function(name).OnServerInvoke = function(player, ...)
 		local ok, a, b = pcall(fn, player, ...)
@@ -736,6 +775,10 @@ function ShopService.Start()
 	wrap("SetSlogan", setSlogan)
 	wrap("BuyFlyer", buyFlyer)
 	wrap("SendGift", gift)
+	wrap("SetFeatured", setFeatured)
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		lastFeatured[player] = nil
+	end)
 
 	-- 棚にプロンプトをつける（店主だけが使える。判定はクライアント表示とサーバー処理の両方）
 	for _, plot in PlotService.All() do

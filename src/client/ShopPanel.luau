@@ -16,6 +16,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local buySlotRemote = Net.Function("BuyShelfSlot")
 local interiorRemote = Net.Function("SetInterior")
+local featuredRemote = Net.Function("SetFeatured")
 local sloganRemote = Net.Function("SetSlogan")
 local flyerRemote = Net.Function("BuyFlyer")
 local flyerEnds = 0
@@ -126,6 +127,42 @@ render = function()
 			invoke(flyerRemote)
 		end
 	end)
+
+	-- 屋根の上の看板商品（自分で作ったデザインから）
+	heading("屋根の上の看板商品（無料）", 90)
+	local featuredGrid = grid(91)
+	local noneCurrent = (profile.featured or "") == ""
+	local none = UI.Button(featuredGrid, if noneCurrent then "なし ✓" else "なし", Color3.fromRGB(205, 150, 110), { LayoutOrder = 0 })
+	if noneCurrent then
+		UI.Stroke(none, UI.Colors.Good, 3)
+	end
+	none.Activated:Connect(function()
+		if not noneCurrent then
+			invoke(featuredRemote, "")
+		end
+	end)
+	local ids = {}
+	for id, design in profile.designs do
+		if not design.boughtFrom then
+			table.insert(ids, id)
+		end
+	end
+	table.sort(ids, function(a, b)
+		return (tonumber(string.sub(a, 2)) or 0) < (tonumber(string.sub(b, 2)) or 0)
+	end)
+	for j, id in ids do
+		local isCurrent = profile.featured == id
+		local name = profile.designs[id].name
+		local button = UI.Button(featuredGrid, if isCurrent then name .. " ✓" else name, Color3.fromRGB(150, 110, 210), { LayoutOrder = j })
+		if isCurrent then
+			UI.Stroke(button, UI.Colors.Good, 3)
+		end
+		button.Activated:Connect(function()
+			if not isCurrent then
+				invoke(featuredRemote, id)
+			end
+		end)
+	end
 
 	-- お店の記録（一番下）
 	heading("最近のお客さん", 100)

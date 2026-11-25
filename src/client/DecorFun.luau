@@ -78,9 +78,34 @@ local function bounce(model: Model)
 	end)
 end
 
+-- 屋根の上の看板商品をゆっくり回す（見た目だけ）
+local function spinFeatured(plots: Instance)
+	local base: { [Model]: CFrame } = {}
+	local angle = 0
+	RunService.RenderStepped:Connect(function(dt)
+		angle = (angle + dt * 0.8) % (2 * math.pi)
+		for _, plot in plots:GetChildren() do
+			local displays = plot:FindFirstChild("Displays")
+			local item = displays and displays:FindFirstChild("Featured")
+			if item and item:IsA("Model") then
+				if not base[item] then
+					base[item] = item:GetPivot()
+				end
+				item:PivotTo(base[item] * CFrame.new(0, math.sin(angle * 2) * 0.3, 0) * CFrame.Angles(0, angle, 0))
+			end
+		end
+		for item in base do
+			if not item.Parent then
+				base[item] = nil
+			end
+		end
+	end)
+end
+
 function DecorFun.Start()
 	local player = Players.LocalPlayer
 	local plots = workspace:WaitForChild("Plots")
+	spinFeatured(plots)
 	while true do
 		task.wait(0.15)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
