@@ -541,6 +541,28 @@ local function setSlogan(player: Player, text: any): (boolean, string)
 	return true, if filtered == "" then "キャッチコピーを消しました" else "キャッチコピーを出しました！"
 end
 
+-- チラシ：コインを払うと少しの間お客さんが増える
+ShopService.FlyerPrice = 60
+ShopService.FlyerSeconds = 180
+local flyerUntil: { [Player]: number } = {}
+local flyerEvent = Net.Event("FlyerUntil")
+
+function ShopService.FlyerActive(player: Player): boolean
+	return (flyerUntil[player] or 0) > os.clock()
+end
+
+local function buyFlyer(player: Player): (boolean, string)
+	if ShopService.FlyerActive(player) then
+		return false, "チラシの効果がまだ続いています"
+	end
+	if not DataService.TrySpend(player, ShopService.FlyerPrice) then
+		return false, ("コインが足りません（%d コイン必要）"):format(ShopService.FlyerPrice)
+	end
+	flyerUntil[player] = os.clock() + ShopService.FlyerSeconds
+	flyerEvent:FireClient(player, ShopService.FlyerSeconds)
+	return true, ("チラシを配りました！%d分間お客さんが増えます"):format(ShopService.FlyerSeconds // 60)
+end
+
 local function wrap(name: string, fn: (...any) -> (boolean, string))
 	Net.Function(name).OnServerInvoke = function(player, ...)
 		local ok, a, b = pcall(fn, player, ...)
@@ -559,6 +581,7 @@ function ShopService.Start()
 	wrap("BuyShelfSlot", buyShelfSlot)
 	wrap("SetInterior", setInterior)
 	wrap("SetSlogan", setSlogan)
+	wrap("BuyFlyer", buyFlyer)
 
 	-- 棚にプロンプトをつける（店主だけが使える。判定はクライアント表示とサーバー処理の両方）
 	for _, plot in PlotService.All() do
@@ -593,6 +616,7 @@ function ShopService.Start()
 	Players.PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil
 		lastSlogan[player] = nil
+		flyerUntil[player] = nil
 	end)
 end
 

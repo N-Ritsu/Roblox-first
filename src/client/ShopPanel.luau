@@ -17,6 +17,11 @@ local playerGui = player:WaitForChild("PlayerGui")
 local buySlotRemote = Net.Function("BuyShelfSlot")
 local interiorRemote = Net.Function("SetInterior")
 local sloganRemote = Net.Function("SetSlogan")
+local flyerRemote = Net.Function("BuyFlyer")
+local flyerEnds = 0
+Net.Event("FlyerUntil").OnClientEvent:Connect(function(seconds: number)
+	flyerEnds = os.clock() + seconds
+end)
 local openSlogan: () -> () = function() end
 
 local panel: Frame
@@ -90,6 +95,18 @@ local function render()
 	else
 		UI.Label(content, "陳列台はぜんぶ増やしました！", { Size = UDim2.new(1, -12, 0, 30), LayoutOrder = 2, TextColor3 = UI.Colors.Good })
 	end
+
+	-- チラシ
+	local flyerLeft = math.max(0, math.floor(flyerEnds - os.clock()))
+	local flyer = UI.Button(content, if flyerLeft > 0 then ("チラシ配布中（あと%d秒）"):format(flyerLeft) else "チラシを配る：3分間お客さんが増える（60）", if flyerLeft > 0 then UI.Colors.Muted else Color3.fromRGB(240, 150, 60), {
+		Size = UDim2.new(1, -12, 0, 42),
+		LayoutOrder = 3,
+	})
+	flyer.Activated:Connect(function()
+		if flyerLeft <= 0 then
+			invoke(flyerRemote)
+		end
+	end)
 
 	local sections = {
 		{ kind = "wall", title = "壁の色", list = ShopUpgrades.Walls, current = profile.interior.wall },

@@ -472,10 +472,10 @@ function CustomerService.Start()
 				if owner and hasStockedShelf(owner) then
 					if not nextSpawn[plot.index] then
 						nextSpawn[plot.index] = now + 3
-					elseif now >= nextSpawn[plot.index] and (active[plot.index] or 0) < CustomerService.MaxPerPlot + (if ShopService.Stars(owner) >= 4 then 1 else 0) then
+					elseif now >= nextSpawn[plot.index] and (active[plot.index] or 0) < CustomerService.MaxPerPlot + (if ShopService.Stars(owner) >= 4 then 1 else 0) + (if ShopService.FlyerActive(owner) then 1 else 0) then
 						-- 評判が高い店ほど、お客さんが来る間隔が短い（★5で約0.6倍）
 						local interval = CustomerService.SpawnInterval
-						local speed = 1 + 0.15 * (ShopService.Stars(owner) - 1)
+						local speed = (1 + 0.15 * (ShopService.Stars(owner) - 1)) * (if ShopService.FlyerActive(owner) then 1.8 else 1)
 						nextSpawn[plot.index] = now + random:NextNumber(interval[1], interval[2]) / speed
 						active[plot.index] = (active[plot.index] or 0) + 1
 						task.spawn(function()
