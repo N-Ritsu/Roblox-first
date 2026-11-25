@@ -116,7 +116,7 @@ local function buildHome(model: Model, origin: CFrame, accent: Color3)
 	Build.Part(home, { Name = "WallRight", Size = Vector3.new(1, 14, full), CFrame = at(h + 0.5, 7, 0), Color = wall })
 	-- 窓（外の景色の代わりに明るい空色の板）
 	for _, x in { -(h - 0.1), h - 0.1 } do
-		Build.Part(home, { Name = "Window", Size = Vector3.new(0.2, 5, 9), CFrame = at(x, 8, 0), Color = Color3.fromRGB(170, 220, 255), Material = Enum.Material.Neon, CanCollide = false })
+		Build.Part(home, { Name = "Window", Size = Vector3.new(0.2, 5, 9), CFrame = at(x, 8, 0), Color = Color3.fromRGB(170, 220, 255), Material = Enum.Material.SmoothPlastic, CanCollide = false })
 	end
 	-- 天井の照明（広いので2つ）
 	for _, z in { -8, 10 } do

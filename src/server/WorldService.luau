@@ -118,7 +118,7 @@ local function setupPlaza()
 end
 
 -- 昼と夜：1日＝約20分。夜（19時〜5時）は2倍の速さで進めて、暗い時間を短くする
-WorldService.DaySeconds = 20 * 60
+WorldService.DaySeconds = 950 -- 夜が2倍速なので、実際の1日は約20分になる
 local function runDayNight()
 	local hoursPerSecond = 24 / WorldService.DaySeconds
 	local last = os.clock()
