@@ -21,6 +21,10 @@ Net.Event("RequestProfile"):FireServer()
 State.order = nil :: any
 Net.Event("Order").OnClientEvent:Connect(function(order)
 	State.order = order
+	-- 開いている画面の「注文◎」の印を更新するため、変化として知らせる
+	if State.profile then
+		changed:Fire(State.profile)
+	end
 end)
 
 -- 今の注文に合うデザインか
