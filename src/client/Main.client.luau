@@ -10,6 +10,7 @@ local modules = {
 	"GoalsPanel",
 	"TravelPanel",
 	"GiftPanel",
+	"HelpPanel",
 	"Guide",
 	"HomePanel",
 	"Prompts", -- Plots を待つので最後
