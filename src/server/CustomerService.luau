@@ -319,6 +319,8 @@ CustomerService.CollectorMinParts = 5 -- コレクターはこれ以上の部品
 -- 冬のお客さん：サンタさん（冬の期間だけ）。冬の限定色を使った品が大好き
 CustomerService.SantaChance = 0.05
 CustomerService.SantaBonus = 2
+CustomerService.WinterLineChance = 0.35
+local WINTER_LINES = { "今日は寒いね〜", "雪がきれいだね！", "プレゼントを探しに来たよ", "もうすぐクリスマスだね", "あったかい物あるかな？" }
 
 local function usesWinterColor(design: any): boolean
 	for _, part in design.parts do
@@ -419,6 +421,9 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 		noticeEvent:FireClient(owner, "サンタさんが来た！ 冬の限定色の品が大好き")
 	elseif preference then
 		say(customer, preference.text)
+	elseif Season.IsActive("winter") and random:NextNumber() < CustomerService.WinterLineChance then
+		-- 好みのないふつうのお客さんは、冬の間ときどき冬のひとこと（雰囲気づくりだけで、買い方は変わらない）
+		say(customer, WINTER_LINES[random:NextInteger(1, #WINTER_LINES)])
 	end
 	if not go(side * 2, 0.6, -10) then
 		return finish()
