@@ -84,13 +84,17 @@ local function render()
 						stars = tonumber(plot:GetAttribute("Stars")) or 1,
 						onSale = tonumber(plot:GetAttribute("OnSale")) or 0,
 						featured = plot:GetAttribute("Featured"),
+						top = plot:GetAttribute("TodayTop") == true,
 					})
 				end
 			end
 		end
 	end
-	-- 商品が並んでいて評判の高い店を上に
+	-- 今日の1位 → 商品が並んでいて評判の高い店 の順に上に
 	table.sort(entries, function(a, b)
+		if a.top ~= b.top then
+			return a.top -- 今日の1位の店がいちばん上
+		end
 		if (a.onSale > 0) ~= (b.onSale > 0) then
 			return a.onSale > 0
 		end
@@ -101,7 +105,7 @@ local function render()
 	end
 	for i, entry in entries do
 		local stars = string.rep("★", entry.stars) .. string.rep("☆", 5 - entry.stars)
-		local text = ("%s のお店 %s ・ %s"):format(entry.name, stars, if entry.onSale > 0 then ("%d品 販売中"):format(entry.onSale) else "準備中")
+		local text = (if entry.top then "👑 " else "") .. ("%s のお店 %s ・ %s"):format(entry.name, stars, if entry.onSale > 0 then ("%d品 販売中"):format(entry.onSale) else "準備中")
 		local hasFeatured = type(entry.featured) == "string" and entry.featured ~= ""
 		if hasFeatured then
 			text ..= ("\n看板商品「%s」"):format(entry.featured)

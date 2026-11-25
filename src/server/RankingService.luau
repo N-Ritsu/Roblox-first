@@ -250,7 +250,13 @@ function RankingService.Start()
 			crown:Destroy()
 			crown = nil
 		end
+		if crownPlot then
+			crownPlot.model:SetAttribute("TodayTop", nil)
+		end
 		crownPlot = plot
+		if plot then
+			plot.model:SetAttribute("TodayTop", true) -- お店めぐりの一覧で👑をつける
+		end
 		local sign = plot and plot.model:FindFirstChild("Sign")
 		if sign and sign:IsA("BasePart") then
 			crown = buildCrown(sign)
