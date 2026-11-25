@@ -250,6 +250,7 @@ function ShelfPanel.Open(slot: number)
 		chosenId = nil
 		priceBox.Text = ""
 	end
+	UI.CloseOtherPanels(ShelfPanel.Close)
 	panel.Visible = true
 	render()
 end
@@ -259,6 +260,7 @@ function ShelfPanel.Close()
 end
 
 function ShelfPanel.Start()
+	UI.RegisterPanel(ShelfPanel.Close)
 	createGui()
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
 		if who ~= player or prompt.Name ~= "ShelfPrompt" then

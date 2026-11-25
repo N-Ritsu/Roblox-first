@@ -255,7 +255,7 @@ local function decide(design: any, price: number, preference: Preference?): (boo
 	return false, if price > value * 2 then "高すぎる…" else "うーん、高いなぁ"
 end
 
-local function visit(plot: PlotService.Plot, owner: Player)
+local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model? })
 	local isValid = function()
 		return plot.owner == owner and owner.Parent ~= nil
 	end
@@ -267,6 +267,7 @@ local function visit(plot: PlotService.Plot, owner: Player)
 	local side = if random:NextNumber() < 0.5 then -1 else 1
 	local start = world(Vector3.new(side * 16, 0.6, -11))
 	local customer = makeCustomer(start)
+	ctx.model = customer.model
 	local function finish()
 		customer.model:Destroy()
 		active[plot.index] = math.max(0, (active[plot.index] or 1) - 1)
@@ -435,9 +436,13 @@ function CustomerService.Start()
 						nextSpawn[plot.index] = now + random:NextNumber(interval[1], interval[2]) / speed
 						active[plot.index] = (active[plot.index] or 0) + 1
 						task.spawn(function()
-							local ok, err = pcall(visit, plot, owner)
+							local ctx: { model: Model? } = {}
+							local ok, err = pcall(visit, plot, owner, ctx)
 							if not ok then
 								warn("[CustomerService] エラー:", err)
+								if ctx.model then
+									ctx.model:Destroy()
+								end
 								active[plot.index] = math.max(0, (active[plot.index] or 1) - 1)
 							end
 						end)

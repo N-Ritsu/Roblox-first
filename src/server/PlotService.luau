@@ -162,7 +162,7 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 
 	-- 地面と歩道
 	Build.Part(model, { Name = "Ground", Size = Vector3.new(44, 0.5, 44), CFrame = at(0, 0.25, 4), Color = Color3.fromRGB(110, 175, 90), Material = Enum.Material.Grass })
-	Build.Part(model, { Name = "Sidewalk", Size = Vector3.new(30, 0.6, 10), CFrame = at(0, 0.3, -10), Color = Color3.fromRGB(205, 205, 200), Material = Enum.Material.Concrete })
+	Build.Part(model, { Name = "Sidewalk", Size = Vector3.new(30, 0.6, 11.5), CFrame = at(0, 0.3, -10.75), Color = Color3.fromRGB(205, 205, 200), Material = Enum.Material.Concrete })
 
 	-- 床・壁・屋根
 	Build.Part(model, { Name = "Floor", Size = Vector3.new(28, 0.4, 21), CFrame = at(0, 0.7, 6), Color = FLOOR, Material = Enum.Material.WoodPlanks })

@@ -143,6 +143,7 @@ function HomePanel.Open()
 		toast("データを読み込み中です…")
 		return
 	end
+	UI.CloseOtherPanels(HomePanel.Close)
 	panel.Visible = true
 	render()
 end
@@ -152,6 +153,7 @@ function HomePanel.Close()
 end
 
 function HomePanel.Start()
+	UI.RegisterPanel(HomePanel.Close)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "HomePanel"
 	gui.ResetOnSpawn = false

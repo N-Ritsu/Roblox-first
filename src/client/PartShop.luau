@@ -102,6 +102,7 @@ function PartShop.Open()
 		UI.Toast(playerGui, "データを読み込み中です…")
 		return
 	end
+	UI.CloseOtherPanels(PartShop.Close)
 	panel.Visible = true
 	render()
 end
@@ -111,6 +112,7 @@ function PartShop.Close()
 end
 
 function PartShop.Start()
+	UI.RegisterPanel(PartShop.Close)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PartShop"
 	gui.ResetOnSpawn = false
@@ -170,12 +172,7 @@ function PartShop.Start()
 	list.Parent = panel
 
 	-- 画面左の「部品」ボタン（工房ボタンの下）
-	local openButton = UI.Button(gui, "部品", Color3.fromRGB(240, 150, 60), {
-		Name = "OpenPartShop",
-		Size = UDim2.new(0, 96, 0, 44),
-		Position = UDim2.new(0, 16, 0.5, -20),
-	})
-	UI.Stroke(openButton, Color3.fromRGB(170, 95, 30), 2)
+	local openButton = UI.SideButton(playerGui, "OpenPartShop", "部品", Color3.fromRGB(240, 150, 60), Color3.fromRGB(170, 95, 30), 2)
 	openButton.Activated:Connect(function()
 		if panel.Visible then
 			PartShop.Close()

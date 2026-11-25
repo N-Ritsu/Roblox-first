@@ -76,6 +76,62 @@ function UI.Button(parent: Instance, text: string, color: Color3?, props: { [str
 	return button
 end
 
+-- 画面左に縦に並ぶ、画面を開くボタン（コイン表示の下から並べる）
+local sideHolder: Frame? = nil
+function UI.SideButton(playerGui: Instance, name: string, text: string, color: Color3, strokeColor: Color3, order: number): TextButton
+	if not sideHolder or not sideHolder.Parent then
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "SideButtons"
+		gui.ResetOnSpawn = false
+		gui.DisplayOrder = 5
+		local holder = Instance.new("Frame")
+		holder.Name = "Holder"
+		holder.BackgroundTransparency = 1
+		holder.Position = UDim2.new(0, 16, 0, 120)
+		holder.Size = UDim2.new(0, 96, 0, 0)
+		holder.AutomaticSize = Enum.AutomaticSize.Y
+		local layout = Instance.new("UIListLayout")
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 8)
+		layout.Parent = holder
+		-- 低い画面（スマホ横向き）では小さくする
+		local scale = Instance.new("UIScale")
+		scale.Parent = holder
+		local function fit()
+			local camera = workspace.CurrentCamera
+			local height = if camera then camera.ViewportSize.Y else 600
+			scale.Scale = if height < 420 then 0.75 else 1
+		end
+		fit()
+		if workspace.CurrentCamera then
+			workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+		end
+		holder.Parent = gui
+		gui.Parent = playerGui
+		sideHolder = holder
+	end
+	local button = UI.Button(sideHolder :: Frame, text, color, {
+		Name = name,
+		Size = UDim2.new(0, 96, 0, 44),
+		LayoutOrder = order,
+	})
+	UI.Stroke(button, strokeColor, 2)
+	return button
+end
+
+-- 画面（パネル）は同時に1つだけ開く
+local panelClosers: { () -> () } = {}
+function UI.RegisterPanel(close: () -> ())
+	table.insert(panelClosers, close)
+end
+function UI.CloseOtherPanels(except: () -> ())
+	for _, close in panelClosers do
+		if close ~= except then
+			pcall(close)
+		end
+	end
+end
+
 -- 画面上部に短いお知らせを出す
 local toastGui: ScreenGui? = nil
 function UI.Toast(playerGui: Instance, text: string, color: Color3?)

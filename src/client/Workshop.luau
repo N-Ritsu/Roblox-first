@@ -614,12 +614,7 @@ local function createGui()
 	})
 
 	-- 画面左下の「工房」ボタン（どこからでも開ける）
-	local openButton = UI.Button(gui, "工房", Color3.fromRGB(90, 170, 240), {
-		Name = "OpenWorkshop",
-		Size = UDim2.new(0, 96, 0, 44),
-		Position = UDim2.new(0, 16, 0.5, -70),
-	})
-	UI.Stroke(openButton, Color3.fromRGB(40, 100, 170), 2)
+	local openButton = UI.SideButton(playerGui, "OpenWorkshop", "工房", Color3.fromRGB(90, 170, 240), Color3.fromRGB(40, 100, 170), 1)
 	openButton.Activated:Connect(function()
 		if panel.Visible then
 			Workshop.Close()
@@ -638,6 +633,7 @@ function Workshop.Open()
 		newDesign()
 	end
 	nameBox.Text = editing.name or ""
+	UI.CloseOtherPanels(Workshop.Close)
 	panel.Visible = true
 	refresh()
 end
@@ -650,6 +646,7 @@ function Workshop.Close()
 end
 
 function Workshop.Start()
+	UI.RegisterPanel(Workshop.Close)
 	createGui()
 
 	RunService.RenderStepped:Connect(function(dt)

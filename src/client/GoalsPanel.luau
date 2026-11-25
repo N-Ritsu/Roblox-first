@@ -91,7 +91,18 @@ local function render()
 	end
 end
 
+function GoalsPanel.Open()
+	UI.CloseOtherPanels(GoalsPanel.Close)
+	panel.Visible = true
+	render()
+end
+
+function GoalsPanel.Close()
+	panel.Visible = false
+end
+
 function GoalsPanel.Start()
+	UI.RegisterPanel(GoalsPanel.Close)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "GoalsPanel"
 	gui.ResetOnSpawn = false
@@ -115,9 +126,7 @@ function GoalsPanel.Start()
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	local close = UI.Button(panel, "×", UI.Colors.Accent, { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(1, -50, 0, 6) })
-	close.Activated:Connect(function()
-		panel.Visible = false
-	end)
+	close.Activated:Connect(GoalsPanel.Close)
 
 	list = Instance.new("ScrollingFrame")
 	list.Size = UDim2.new(1, -24, 1, -62)
@@ -140,15 +149,10 @@ function GoalsPanel.Start()
 	list.Parent = panel
 
 	-- 画面左の「目標」ボタン（お店ボタンの下）
-	local openButton = UI.Button(gui, "目標", Color3.fromRGB(90, 185, 110), {
-		Name = "OpenGoals",
-		Size = UDim2.new(0, 96, 0, 44),
-		Position = UDim2.new(0, 16, 0.5, 80),
-	})
-	UI.Stroke(openButton, Color3.fromRGB(50, 120, 70), 2)
+	local openButton = UI.SideButton(playerGui, "OpenGoals", "目標", Color3.fromRGB(90, 185, 110), Color3.fromRGB(50, 120, 70), 4)
 	badge = UI.Label(openButton, "!", {
 		Size = UDim2.new(0, 24, 0, 24),
-		Position = UDim2.new(1, -12, 0, -16),
+		Position = UDim2.new(1, -14, 0, -6),
 		BackgroundTransparency = 0,
 		BackgroundColor3 = UI.Colors.Accent,
 		TextColor3 = Color3.new(1, 1, 1),
@@ -157,9 +161,10 @@ function GoalsPanel.Start()
 	})
 	UI.Corner(badge, 12)
 	openButton.Activated:Connect(function()
-		panel.Visible = not panel.Visible
 		if panel.Visible then
-			render()
+			GoalsPanel.Close()
+		else
+			GoalsPanel.Open()
 		end
 	end)
 

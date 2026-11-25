@@ -120,6 +120,7 @@ function ShopPanel.Open()
 		UI.Toast(playerGui, "データを読み込み中です…")
 		return
 	end
+	UI.CloseOtherPanels(ShopPanel.Close)
 	panel.Visible = true
 	render()
 end
@@ -129,6 +130,7 @@ function ShopPanel.Close()
 end
 
 function ShopPanel.Start()
+	UI.RegisterPanel(ShopPanel.Close)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "ShopPanel"
 	gui.ResetOnSpawn = false
@@ -176,12 +178,7 @@ function ShopPanel.Start()
 	content.Parent = panel
 
 	-- 画面左の「お店」ボタン（部品ボタンの下）
-	local openButton = UI.Button(gui, "お店", Color3.fromRGB(150, 110, 210), {
-		Name = "OpenShopPanel",
-		Size = UDim2.new(0, 96, 0, 44),
-		Position = UDim2.new(0, 16, 0.5, 30),
-	})
-	UI.Stroke(openButton, Color3.fromRGB(100, 70, 150), 2)
+	local openButton = UI.SideButton(playerGui, "OpenShopPanel", "お店", Color3.fromRGB(150, 110, 210), Color3.fromRGB(100, 70, 150), 3)
 	openButton.Activated:Connect(function()
 		if panel.Visible then
 			ShopPanel.Close()
