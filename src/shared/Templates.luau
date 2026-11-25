@@ -1,6 +1,7 @@
 --!strict
 -- 工房の見本デザイン（needs がないものは最初から使える部品だけで作ってある）
--- needs = 保存に解放が必要な形の id（部品ショップで解放する動機づけ）
+-- needs = 保存に解放が必要な部品 { shapes = {...}, colors = {...} }（部品ショップで解放する動機づけ）
+-- season = その季節の間だけ見せる（解放済みなら季節外でも見せる）
 -- くさびは高い面が奥（+Z）で、手前に向かって下る。よこ回転4（180°）で向きが逆になる
 -- 円柱は横向き（X方向）が基本なので、rot = {2, 2}（たて90°・よこ90°）で縦向きになる
 
@@ -70,7 +71,7 @@ local Templates = {
 	},
 	{
 		name = "おうち",
-		needs = { "Wedge" },
+		needs = { shapes = { "Wedge" } },
 		parts = {
 			p("Block", "White", "Plastic", { 4, 3, 4 }, { 0, 0, 0 }),
 			p("Wedge", "Red", "Plastic", { 4, 2, 2 }, { 0, 2.5, -1 }),
@@ -82,12 +83,37 @@ local Templates = {
 	},
 	{
 		name = "すべり台",
-		needs = { "Wedge" },
+		needs = { shapes = { "Wedge" } },
 		parts = {
 			p("Block", "Blue", "SmoothPlastic", { 2, 3, 2 }, { 0, 0, 1 }),
 			p("Wedge", "Yellow", "SmoothPlastic", { 2, 3, 3 }, { 0, 0, -1.5 }),
 			p("Block", "Red", "SmoothPlastic", { 0.5, 1, 2 }, { -1, 2, 1 }),
 			p("Block", "Red", "SmoothPlastic", { 0.5, 1, 2 }, { 1, 2, 1 }),
+		},
+	},
+	{
+		name = "クリスマスツリー",
+		needs = { colors = { "Holly", "Berry" } },
+		season = "winter",
+		parts = {
+			p("Cylinder", "Brown", "Wood", { 1.5, 1, 1 }, { 0, -3, 0 }, UP),
+			p("Ball", "Holly", "Plastic", { 3.5, 3.5, 3.5 }, { 0, -1.5, 0 }),
+			p("Ball", "Holly", "Plastic", { 2.5, 2.5, 2.5 }, { 0, 0.5, 0 }),
+			p("Ball", "Holly", "Plastic", { 1.5, 1.5, 1.5 }, { 0, 2, 0 }),
+			p("Ball", "Yellow", "SmoothPlastic", { 1, 1, 1 }, { 0, 3, 0 }),
+			p("Ball", "Berry", "SmoothPlastic", { 0.5, 0.5, 0.5 }, { 1.5, -1.5, -1 }),
+		},
+	},
+	{
+		name = "プレゼント箱",
+		needs = { colors = { "Berry", "SnowWhite" } },
+		season = "winter",
+		parts = {
+			p("Block", "Berry", "SmoothPlastic", { 3, 2.5, 3 }, { 0, 0, 0 }),
+			p("Block", "SnowWhite", "SmoothPlastic", { 0.5, 3, 3.5 }, { 0, 0, 0 }),
+			p("Block", "SnowWhite", "SmoothPlastic", { 3.5, 3, 0.5 }, { 0, 0, 0 }),
+			p("Ball", "SnowWhite", "SmoothPlastic", { 1, 1, 1 }, { -0.5, 1.5, 0 }),
+			p("Ball", "SnowWhite", "SmoothPlastic", { 1, 1, 1 }, { 0.5, 1.5, 0 }),
 		},
 	},
 }

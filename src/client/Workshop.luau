@@ -451,11 +451,22 @@ local function buildDesignList()
 	for i, template in Templates do
 		-- 解放していない形を使う見本は、読み込めるが保存には解放が必要
 		local missing: { string } = {}
-		for _, shapeId in (template :: any).needs or {} do
+		local needs = (template :: any).needs or {}
+		for _, shapeId in needs.shapes or {} do
 			if not unlocked("shapes", shapeId) then
 				local shape = Catalog.ShapeById[shapeId]
 				table.insert(missing, if shape then shape.name else shapeId)
 			end
+		end
+		for _, colorId in needs.colors or {} do
+			if not unlocked("colors", colorId) then
+				local color = Catalog.ColorById[colorId]
+				table.insert(missing, if color then color.name else colorId)
+			end
+		end
+		local season = (template :: any).season
+		if season and #missing > 0 and not Season.IsActive(season) then
+			continue -- 季節外の見本は、必要な部品を持っていなければ出さない
 		end
 		local needText = if #missing > 0 then ("（要：%s）"):format(table.concat(missing, "・")) else ""
 		local button = UI.Button(
