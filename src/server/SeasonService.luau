@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Season = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Season"))
 local Build = require(script.Parent:WaitForChild("Build"))
 local WorldService = require(script.Parent:WaitForChild("WorldService"))
+local PlotService = require(script.Parent:WaitForChild("PlotService"))
 
 local SeasonService = {}
 
@@ -125,6 +126,24 @@ local function buildExtras(parent: Instance, position: Vector3)
 	extras.Parent = parent
 end
 
+-- 店の屋根と、ひさしの上のふち（壁ぎわ）に積もった雪。位置は PlotService の屋根・ひさしに合わせる
+-- ひさしの色の縞が見えなくならないよう、ひさしは壁ぎわの細い帯だけにする
+local SNOW = Color3.fromRGB(248, 251, 255)
+local function buildRoofSnow(parent: Instance)
+	for _, plot in PlotService.All() do
+		local origin = plot.origin
+		Build.Part(parent, { Name = "RoofSnow", Size = Vector3.new(31.4, 0.5, 23.4), CFrame = origin * CFrame.new(0, 14.15, 6), Color = SNOW, Material = Enum.Material.Snow, CanCollide = false })
+		Build.Part(parent, {
+			Name = "AwningSnow",
+			Size = Vector3.new(28.2, 0.3, 1.6),
+			CFrame = origin * CFrame.new(0, 11.5, -6.6) * CFrame.Angles(math.rad(-20), 0, 0) * CFrame.new(0, 0.3, 1.7),
+			Color = SNOW,
+			Material = Enum.Material.Snow,
+			CanCollide = false,
+		})
+	end
+end
+
 local decor: Folder? = nil
 
 local function setDecor(active: boolean)
@@ -134,6 +153,7 @@ local function setDecor(active: boolean)
 		local spot = WorldService.SpotPosition(WorldService.SeasonSpot, 22) + Vector3.new(0, 0.4, 0) -- ベンチを置いていない外周の場所
 		buildTree(folder, spot)
 		buildExtras(folder, spot)
+		buildRoofSnow(folder)
 		buildSnow(folder)
 		folder.Parent = workspace
 		decor = folder
