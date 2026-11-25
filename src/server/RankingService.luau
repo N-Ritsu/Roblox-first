@@ -4,6 +4,7 @@
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 
+local Net = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local Build = require(script.Parent:WaitForChild("Build"))
 local WorldService = require(script.Parent:WaitForChild("WorldService"))
@@ -184,30 +185,54 @@ function RankingService.Start()
 		return label
 	end
 	line(0, "人気のお店ランキング", Color3.fromRGB(255, 220, 90), 56)
+	-- 今日（日本時間）いちばん売れた店（このサーバー内）。板の高さ 300px に収まるよう行は 30px
+	local todayRow = line(1, "", Color3.fromRGB(255, 175, 215), 30)
 	local rows = {}
 	for i = 1, RankingService.Shown do
-		rows[i] = line(i, "", Color3.new(1, 1, 1), 36)
+		rows[i] = line(i + 1, "", Color3.new(1, 1, 1), 30)
 	end
 	gui.Parent = board
+	local noticeEvent = Net.Event("Notice")
+	local leader: Player? = nil
 
-	task.spawn(function()
-		while true do
-			local entries = {}
-			for _, player in Players:GetPlayers() do
-				local profile = DataService.Get(player)
-				if profile then
-					table.insert(entries, { name = player.DisplayName, sold = profile.stats.sold })
+	local function refresh()
+		local entries = {}
+		local day = math.floor((os.time() + 9 * 3600) / 86400) -- DataService.AddToday と同じ日付の区切り
+		local best: Player? = nil
+		local bestName, bestSold, bestEarned = "", 0, 0
+		for _, player in Players:GetPlayers() do
+			local profile = DataService.Get(player)
+			if profile then
+				table.insert(entries, { name = player.DisplayName, sold = profile.stats.sold })
+				local today = profile.today
+				if type(today) == "table" and today.day == day and (today.sold > bestSold or (today.sold == bestSold and today.sold > 0 and today.earned > bestEarned)) then
+					best, bestName, bestSold, bestEarned = player, player.DisplayName, today.sold, today.earned
 				end
 			end
-			table.sort(entries, function(a, b)
-				return a.sold > b.sold
-			end)
-			for i, row in rows do
-				local entry = entries[i]
-				row.Text = if entry then ("%d位　%s のお店　%d個"):format(i, entry.name, entry.sold) else ""
-			end
-			if #entries == 0 then
-				rows[1].Text = "まだだれもいません"
+		end
+		todayRow.Text = if best then ("今日いちばん売れた店：%s のお店（%d個）"):format(bestName, bestSold) else "今日はまだだれも売っていません"
+		-- 新しく1位になったら本人に知らせる（ほかにも人がいて、3個以上売れているときだけ）
+		if best and best ~= leader and bestSold >= 3 and #entries >= 2 then
+			leader = best
+			noticeEvent:FireClient(best, "今日このサーバーでいちばん売れているお店になりました！ 広場の掲示板に出ています")
+		end
+		table.sort(entries, function(a, b)
+			return a.sold > b.sold
+		end)
+		for i, row in rows do
+			local entry = entries[i]
+			row.Text = if entry then ("%d位　%s のお店　%d個"):format(i, entry.name, entry.sold) else ""
+		end
+		if #entries == 0 then
+			rows[1].Text = "まだだれもいません"
+		end
+	end
+	task.spawn(function()
+		while true do
+			-- 1回のエラーで掲示板が止まったままにならないよう、毎回 pcall で包む
+			local ok, err = pcall(refresh)
+			if not ok then
+				warn("[RankingService] 掲示板のエラー:", err)
 			end
 			task.wait(10)
 		end
