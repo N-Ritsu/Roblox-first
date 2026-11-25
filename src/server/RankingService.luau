@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local Build = require(script.Parent:WaitForChild("Build"))
+local WorldService = require(script.Parent:WaitForChild("WorldService"))
 
 local RankingService = {}
 
@@ -14,8 +15,8 @@ function RankingService.Start()
 	local board = Build.Part(workspace:WaitForChild("Plaza"), {
 		Name = "RankingBoard",
 		Size = Vector3.new(14, 10, 0.6),
-		-- 広場の南側、噴水の方を向けて立てる
-		CFrame = CFrame.lookAt(Vector3.new(0, 7, -24), Vector3.new(0, 7, 0)),
+		-- 広場の外周（店への道を避けた場所）に、噴水の方を向けて立てる
+		CFrame = CFrame.lookAt(WorldService.SpotPosition(WorldService.RankingSpot, 22) + Vector3.new(0, 7, 0), Vector3.new(0, 7, 0)),
 		Color = Color3.fromRGB(120, 80, 55),
 		Material = Enum.Material.Wood,
 	})

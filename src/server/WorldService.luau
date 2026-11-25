@@ -7,6 +7,14 @@ local Build = require(script.Parent:WaitForChild("Build"))
 
 local WorldService = {}
 
+-- 広場の外周（街灯の間）の6か所のうち、ベンチを置かない場所（番号 i の角度 = (i+0.5)/6 周）
+WorldService.RankingSpot = 2 -- 150°
+WorldService.SeasonSpot = 3 -- 210°
+function WorldService.SpotPosition(i: number, radius: number): Vector3
+	local angle = (i + 0.5) / 6 * math.pi * 2
+	return Vector3.new(math.sin(angle) * radius, 0, math.cos(angle) * radius)
+end
+
 local function setupLighting()
 	Lighting.ClockTime = 14.5
 	Lighting.Brightness = 2.2
@@ -122,6 +130,9 @@ local function setupPlaza()
 		Color3.fromRGB(255, 255, 255),
 	}
 	for i = 0, 5 do
+		if i == WorldService.RankingSpot or i == WorldService.SeasonSpot then
+			continue -- ランキング掲示板と季節の飾りの場所
+		end
 		local angle = (i + 0.5) / 6 * math.pi * 2
 		local spot = Vector3.new(math.sin(angle) * 22, 0, math.cos(angle) * 22)
 		local facing = CFrame.lookAt(spot, Vector3.new(0, 0, 0))

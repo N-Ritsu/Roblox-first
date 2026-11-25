@@ -447,7 +447,7 @@ end
 CustomerService.Passersby = 4
 local function randomPlazaPoint(): Vector3
 	local angle = random:NextNumber() * math.pi * 2
-	local radius = random:NextNumber(12, 20) -- 噴水（半径8）とベンチ（半径22）の間
+	local radius = random:NextNumber(12, 17) -- 噴水（半径8）とベンチ・ツリー（半径17.5〜）の間
 	return Vector3.new(math.sin(angle) * radius, 0.4, math.cos(angle) * radius)
 end
 
@@ -458,15 +458,15 @@ local function passerby()
 	local walker = makeCustomer(randomPlazaPoint(), false)
 	while true do
 		local target = randomPlazaPoint()
-		-- 噴水を突っ切らないよう、反対側へ行くときは円周に沿って回り道する
+		-- 噴水を突っ切らないよう、円周に沿って45°ずつ歩く（どの区間も中心から約13以上離れる）
 		local from = walker.position
-		local mid = (from + target) / 2
-		if Vector3.new(mid.X, 0, mid.Z).Magnitude < 11 then
-			local around = Vector3.new(-mid.Z, 0, mid.X)
-			if around.Magnitude < 0.1 then
-				around = Vector3.new(1, 0, 0)
-			end
-			walkTo(walker, around.Unit * 16 + Vector3.new(0, 0.4, 0), always)
+		local a0 = math.atan2(from.X, from.Z)
+		local a1 = math.atan2(target.X, target.Z)
+		local d = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi
+		local steps = math.ceil(math.abs(d) / math.rad(45))
+		for s = 1, steps - 1 do
+			local a = a0 + d * s / steps
+			walkTo(walker, Vector3.new(math.sin(a) * 14, 0.4, math.cos(a) * 14), always)
 		end
 		walkTo(walker, target, always)
 		task.wait(random:NextNumber(2, 6))
