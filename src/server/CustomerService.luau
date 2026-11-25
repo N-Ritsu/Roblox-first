@@ -443,6 +443,36 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 	finish()
 end
 
+-- 広場をぶらぶら歩く通行人（お店には入らない。ワールドをにぎやかに見せるため）
+CustomerService.Passersby = 4
+local function randomPlazaPoint(): Vector3
+	local angle = random:NextNumber() * math.pi * 2
+	local radius = random:NextNumber(12, 20) -- 噴水（半径8）とベンチ（半径22）の間
+	return Vector3.new(math.sin(angle) * radius, 0.4, math.cos(angle) * radius)
+end
+
+local function passerby()
+	local always = function()
+		return true
+	end
+	local walker = makeCustomer(randomPlazaPoint(), false)
+	while true do
+		local target = randomPlazaPoint()
+		-- 噴水を突っ切らないよう、反対側へ行くときは円周に沿って回り道する
+		local from = walker.position
+		local mid = (from + target) / 2
+		if Vector3.new(mid.X, 0, mid.Z).Magnitude < 11 then
+			local around = Vector3.new(-mid.Z, 0, mid.X)
+			if around.Magnitude < 0.1 then
+				around = Vector3.new(1, 0, 0)
+			end
+			walkTo(walker, around.Unit * 16 + Vector3.new(0, 0.4, 0), always)
+		end
+		walkTo(walker, target, always)
+		task.wait(random:NextNumber(2, 6))
+	end
+end
+
 -- 陳列している商品がある店ほど、お客さんが来やすい
 local function hasStockedShelf(owner: Player): boolean
 	local profile = DataService.Get(owner)
@@ -461,6 +491,15 @@ function CustomerService.Start()
 	folder = Instance.new("Folder")
 	folder.Name = "Customers"
 	folder.Parent = workspace
+
+	for _ = 1, CustomerService.Passersby do
+		task.spawn(function()
+			local ok, err = pcall(passerby)
+			if not ok then
+				warn("[CustomerService] 通行人のエラー:", err)
+			end
+		end)
+	end
 
 	local nextSpawn: { [number]: number } = {}
 	task.spawn(function()

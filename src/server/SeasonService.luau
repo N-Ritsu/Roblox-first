@@ -96,7 +96,7 @@ function SeasonService.Start()
 	local folder = Instance.new("Folder")
 	folder.Name = "WinterDecor"
 	folder.Parent = workspace
-	buildTree(folder, Vector3.new(18, 0, 18))
+	buildTree(folder, Vector3.new(6.5, 0.4, 11.3)) -- 噴水とベンチの間（店への道を避けた30°の方向）
 	buildSnow(folder)
 end
 

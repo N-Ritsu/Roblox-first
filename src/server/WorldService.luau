@@ -114,6 +114,43 @@ local function setupPlaza()
 		light.Parent = bulb
 	end
 
+	-- ベンチ（街灯の内側、広場の中心を向く）と花壇
+	local flowerColors = {
+		Color3.fromRGB(240, 90, 110),
+		Color3.fromRGB(250, 210, 70),
+		Color3.fromRGB(170, 110, 230),
+		Color3.fromRGB(255, 255, 255),
+	}
+	for i = 0, 5 do
+		local angle = (i + 0.5) / 6 * math.pi * 2
+		local spot = Vector3.new(math.sin(angle) * 22, 0, math.cos(angle) * 22)
+		local facing = CFrame.lookAt(spot, Vector3.new(0, 0, 0))
+		Build.Part(plaza, { Name = "BenchSeat", Size = Vector3.new(6, 0.5, 2), CFrame = facing * CFrame.new(0, 1.9, 0), Color = Color3.fromRGB(160, 110, 70), Material = Enum.Material.Wood })
+		Build.Part(plaza, { Name = "BenchBack", Size = Vector3.new(6, 1.6, 0.4), CFrame = facing * CFrame.new(0, 2.9, 0.9), Color = Color3.fromRGB(160, 110, 70), Material = Enum.Material.Wood })
+		for _, x in { -2.5, 2.5 } do
+			Build.Part(plaza, { Name = "BenchLeg", Size = Vector3.new(0.4, 1.6, 1.6), CFrame = facing * CFrame.new(x, 0.9, 0), Color = Color3.fromRGB(60, 60, 70), Material = Enum.Material.Metal })
+		end
+		-- 花壇（ベンチの左右）
+		for _, x in { -5.5, 5.5 } do
+			local bed = facing * CFrame.new(x, 0, 0)
+			Build.Part(plaza, { Name = "FlowerBed", Size = Vector3.new(3, 1, 3), CFrame = bed * CFrame.new(0, 0.5, 0), Color = Color3.fromRGB(120, 85, 60), Material = Enum.Material.Brick })
+			Build.Part(plaza, { Name = "Soil", Size = Vector3.new(2.6, 0.2, 2.6), CFrame = bed * CFrame.new(0, 1.05, 0), Color = Color3.fromRGB(70, 140, 60), Material = Enum.Material.Grass })
+			for f = 1, 4 do
+				local fx = if f % 2 == 0 then 0.6 else -0.6
+				local fz = if f <= 2 then 0.6 else -0.6
+				Build.Part(plaza, {
+					Name = "Flower",
+					Size = Vector3.new(0.7, 0.7, 0.7),
+					CFrame = bed * CFrame.new(fx, 1.5, fz),
+					Color = flowerColors[(i + f) % #flowerColors + 1],
+					Material = Enum.Material.SmoothPlastic,
+					Shape = Enum.PartType.Ball,
+					CanCollide = false,
+				})
+			end
+		end
+	end
+
 	plaza.Parent = workspace
 end
 
