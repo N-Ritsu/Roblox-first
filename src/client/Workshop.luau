@@ -255,6 +255,19 @@ local function buildControls()
 			selected = #parts
 			refresh()
 		end)
+		-- 左右反転コピー：左右対称の作品（いすの脚・車の車輪・羽など）を作りやすく
+		-- 左右の鏡写しは、位置の左右を反対にし、よこ回転を逆向きにすると同じ形になる（箱・球・円柱・くさび）
+		choiceButton(partsGrid, "左右反転", false, true, 104, function()
+			local copy = deepCopy(part)
+			copy.pos[1] = -copy.pos[1]
+			copy.rot[2] = (-copy.rot[2]) % 8
+			table.insert(parts, copy)
+			selected = #parts
+			refresh()
+			if part.pos[1] == 0 then
+				toast("真ん中にある部品なので同じ場所に重なっています。左右に動かしてから使うと便利です")
+			end
+		end)
 	end
 	if #parts > 1 then
 		choiceButton(partsGrid, "削除", false, true, 102, function()
