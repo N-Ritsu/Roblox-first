@@ -65,6 +65,7 @@ end
 -- 元に戻す：変更のたびに部品の状態を記録しておく（最大10回分）
 local HISTORY_LIMIT = 10
 local history: { any } = {}
+local sortBySales = false -- デザイン一覧を売れた順に並べるか
 
 local function partsKey(parts: any): string
 	local pieces = {}
@@ -500,9 +501,26 @@ local function buildDesignList()
 			table.insert(ids, id)
 		end
 	end
+	local function order(id: string): number
+		return tonumber(string.sub(id, 2)) or 0
+	end
+	local sales = profile.designSales or {}
 	table.sort(ids, function(a, b)
-		return (tonumber(string.sub(a, 2)) or 0) < (tonumber(string.sub(b, 2)) or 0)
+		if sortBySales and (sales[a] or 0) ~= (sales[b] or 0) then
+			return (sales[a] or 0) > (sales[b] or 0)
+		end
+		return order(a) < order(b)
 	end)
+	if #ids >= 2 then
+		local sortButton = UI.Button(designList, if sortBySales then "並び：売れた順（押すと作った順）" else "並び：作った順（押すと売れた順）", Color3.fromRGB(150, 140, 165), {
+			Size = UDim2.new(1, -8, 0, 26),
+			LayoutOrder = 2,
+		})
+		sortButton.Activated:Connect(function()
+			sortBySales = not sortBySales
+			buildDesignList()
+		end)
+	end
 	for i, id in ids do
 		local design = profile.designs[id]
 		local active = id == editId
@@ -513,7 +531,7 @@ local function buildDesignList()
 		end
 		local button = UI.Button(designList, label, if active then UI.Colors.Good else Color3.fromRGB(205, 150, 110), {
 			Size = UDim2.new(1, -8, 0, 30),
-			LayoutOrder = i + 1,
+			LayoutOrder = i + 10, -- 0〜2 は新規・コピー・並び替えのボタン
 		})
 		button.Activated:Connect(function()
 			editing = deepCopy(design)
