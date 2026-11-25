@@ -13,6 +13,7 @@ local ShopService = require(script.Parent:WaitForChild("ShopService"))
 local HomeService = {}
 
 local lastRequest: { [Player]: number } = {}
+local likedBy: { [Player]: { [number]: boolean } } = {}
 
 local function cellKey(x: number, z: number): string
 	return x .. "_" .. z
@@ -42,6 +43,16 @@ local function decorFolder(plot: PlotService.Plot): Folder
 	return folder :: Folder
 end
 
+local function setLikes(plot: PlotService.Plot, likes: number)
+	local home = plot.model:FindFirstChild("Home")
+	local board = home and home:FindFirstChild("LikeBoard")
+	local gui = board and board:FindFirstChildOfClass("SurfaceGui")
+	local label = gui and gui:FindFirstChild("Text")
+	if label and label:IsA("TextLabel") then
+		label.Text = ("いいね ♥ %d"):format(likes)
+	end
+end
+
 function HomeService.Render(player: Player)
 	local plot = PlotService.Get(player)
 	local profile = DataService.Get(player)
@@ -50,6 +61,8 @@ function HomeService.Render(player: Player)
 	end
 	local folder = decorFolder(plot)
 	folder:ClearAllChildren()
+	plot.model:SetAttribute("HomePublic", profile.homePublic) -- クライアントのドアの表示に使う
+	setLikes(plot, profile.homeLikes)
 	for key, placed in profile.home do
 		local x, z = parseCell(key)
 		local design = profile.designs[placed.designId]
@@ -63,6 +76,8 @@ function HomeService.Render(player: Player)
 end
 
 local function clear(plot: PlotService.Plot)
+	plot.model:SetAttribute("HomePublic", nil)
+	setLikes(plot, 0)
 	local home = plot.model:FindFirstChild("Home")
 	local folder = home and home:FindFirstChild("Decor")
 	if folder then
@@ -153,11 +168,36 @@ function HomeService.Start()
 		for _, prompt in plot.model:GetDescendants() do
 			if prompt:IsA("ProximityPrompt") and prompt.Name == "HomeEnterPrompt" then
 				prompt.Triggered:Connect(function(player)
-					if plot.owner == player then
+					local ownerProfile = plot.owner and DataService.Get(plot.owner)
+					if plot.owner == player or (ownerProfile and ownerProfile.homePublic) then
 						teleport(player, plot.origin * PlotService.HomeSpawnOffset)
 					else
-						noticeEvent:FireClient(player, "ここは他の人の自宅です")
+						noticeEvent:FireClient(player, "この自宅は公開されていません")
 					end
+				end)
+			elseif prompt:IsA("ProximityPrompt") and prompt.Name == "HomeLikePrompt" then
+				prompt.Triggered:Connect(function(player)
+					local owner = plot.owner
+					local ownerProfile = owner and DataService.Get(owner)
+					if not owner or not ownerProfile then
+						return
+					end
+					if owner == player then
+						noticeEvent:FireClient(player, "自分の部屋にはいいねできません")
+						return
+					end
+					-- 同じ人からのいいねは、このサーバーにいる間は1回まで
+					likedBy[owner] = likedBy[owner] or {}
+					if likedBy[owner][player.UserId] then
+						noticeEvent:FireClient(player, "もういいねしました")
+						return
+					end
+					likedBy[owner][player.UserId] = true
+					ownerProfile.homeLikes += 1
+					setLikes(plot, ownerProfile.homeLikes)
+					DataService.Changed(owner)
+					noticeEvent:FireClient(player, "いいねしました！")
+					noticeEvent:FireClient(owner, ("%s さんが自宅にいいねしてくれた！"):format(player.DisplayName))
 				end)
 			elseif prompt:IsA("ProximityPrompt") and prompt.Name == "HomeExitPrompt" then
 				prompt.Triggered:Connect(function(player)
@@ -181,8 +221,19 @@ function HomeService.Start()
 	PlotService.Released:Connect(function(_, plot)
 		clear(plot)
 	end)
+	Net.Function("SetHomePublic").OnServerInvoke = function(player, value)
+		local profile = DataService.Get(player)
+		if not profile or type(value) ~= "boolean" then
+			return false, "設定できませんでした"
+		end
+		profile.homePublic = value
+		DataService.Changed(player)
+		HomeService.Render(player)
+		return true, if value then "自宅を公開しました" else "自宅を非公開にしました"
+	end
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil
+		likedBy[player] = nil
 	end)
 end
 

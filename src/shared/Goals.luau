@@ -63,6 +63,9 @@ Goals.List = {
 	end },
 	{ id = "unlock15", text = "部品を15個解放する", target = 15, reward = 300, progress = paidUnlocks },
 	{ id = "streak7", text = "7日連続でログインする", target = 7, reward = 300, progress = streak },
+	{ id = "likes10", text = "自宅に「いいね」を10個もらう", target = 10, reward = 200, progress = function(p)
+		return p.homeLikes
+	end },
 	{ id = "sold200", text = "商品を200個売る", target = 200, reward = 400, progress = sold },
 	{ id = "earned5000", text = "売上を合計5000コインにする", target = 5000, reward = 500, progress = earned },
 } :: { Goal }

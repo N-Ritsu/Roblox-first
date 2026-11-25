@@ -14,8 +14,16 @@ local function apply(prompt: ProximityPrompt, mine: boolean, occupied: boolean)
 		prompt.Enabled = (mine or occupied) and not prompt:GetAttribute("Locked")
 		prompt.ActionText = if mine then "棚に並べる" else "買う"
 		prompt.HoldDuration = if mine then 0 else 0.4 -- 間違って買わないよう少し長押し
-	elseif prompt.Name == "WorkbenchPrompt" or prompt.Name == "HomeEnterPrompt" then
+	elseif prompt.Name == "WorkbenchPrompt" or prompt.Name == "HomeDecorPrompt" then
 		prompt.Enabled = mine
+	elseif prompt.Name == "HomeEnterPrompt" then
+		-- 他の人の自宅は、公開されていれば入れる
+		local plot = prompt:FindFirstAncestor("Plots")
+		local plotModel = prompt.Parent and prompt.Parent.Parent
+		prompt.Enabled = mine or (plot ~= nil and plotModel ~= nil and plotModel:GetAttribute("HomePublic") == true)
+		prompt.ActionText = if mine then "自宅に入る" else "おじゃまする"
+	elseif prompt.Name == "HomeLikePrompt" then
+		prompt.Enabled = occupied and not mine
 	end
 end
 
@@ -32,6 +40,7 @@ local function watchPlot(plot: Instance)
 		end
 	end
 	plot:GetAttributeChangedSignal("OwnerUserId"):Connect(refresh)
+	plot:GetAttributeChangedSignal("HomePublic"):Connect(refresh)
 	local function watchLock(prompt: ProximityPrompt)
 		if prompt.Name ~= "ShelfPrompt" or watched[prompt] then
 			return

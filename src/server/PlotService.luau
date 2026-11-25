@@ -125,6 +125,18 @@ local function buildHome(model: Model, origin: CFrame, accent: Color3)
 	exitPrompt.RequiresLineOfSight = false
 	exitPrompt.Parent = door
 
+	-- いいねの看板（訪れた人が押せる）
+	local likeBoard = Build.Part(home, { Name = "LikeBoard", Size = Vector3.new(5, 3, 0.4), CFrame = at(0, 5, -17), Color = Color3.fromRGB(240, 120, 150), Material = Enum.Material.SmoothPlastic })
+	Build.Sign(likeBoard, "いいね ♥ 0", Enum.NormalId.Back)
+	local likePrompt = Instance.new("ProximityPrompt")
+	likePrompt.Name = "HomeLikePrompt"
+	likePrompt.ActionText = "いいね！"
+	likePrompt.ObjectText = "この部屋"
+	likePrompt.HoldDuration = 0
+	likePrompt.MaxActivationDistance = 9
+	likePrompt.RequiresLineOfSight = false
+	likePrompt.Parent = likeBoard
+
 	-- 模様替えの看板
 	local board = Build.Part(home, { Name = "DecorBoard", Size = Vector3.new(6, 3, 0.4), CFrame = at(10, 4, -17), Color = Color3.fromRGB(120, 80, 55), Material = Enum.Material.Wood })
 	Build.Sign(board, "模様替え", Enum.NormalId.Back)

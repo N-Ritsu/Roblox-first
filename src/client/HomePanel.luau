@@ -18,6 +18,8 @@ local GRID = 6 -- サーバーの PlotService.HomeGridSize と同じ
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local setCellRemote = Net.Function("SetHomeCell")
+local publicRemote = Net.Function("SetHomePublic")
+local publicButton: TextButton
 
 local panel: Frame
 local grid: Frame
@@ -52,6 +54,8 @@ local function render()
 	if not profile then
 		return
 	end
+	publicButton.Text = if profile.homePublic then ("公開中 ♥%d"):format(profile.homeLikes or 0) else "非公開"
+	publicButton.BackgroundColor3 = if profile.homePublic then UI.Colors.Good else UI.Colors.Muted
 	for _, child in grid:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
@@ -173,12 +177,27 @@ function HomePanel.Start()
 	constraint.Parent = panel
 
 	UI.Label(panel, "模様替え", {
-		Size = UDim2.new(1, -80, 0, 34),
+		Size = UDim2.new(1, -240, 0, 34),
 		Position = UDim2.new(0, 16, 0, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	local close = UI.Button(panel, "×", UI.Colors.Accent, { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(1, -50, 0, 6) })
 	close.Activated:Connect(HomePanel.Close)
+	publicButton = UI.Button(panel, "公開中", UI.Colors.Good, { Size = UDim2.new(0, 150, 0, 36), Position = UDim2.new(1, -210, 0, 8) })
+	publicButton.Activated:Connect(function()
+		local profile = State.profile
+		if not profile or busy then
+			return
+		end
+		busy = true
+		local ok, result, message = pcall(function()
+			return publicRemote:InvokeServer(not profile.homePublic)
+		end)
+		busy = false
+		if ok then
+			toast(tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
+		end
+	end)
 
 	-- 左：マス目（正方形を保つ）
 	grid = UI.Frame(panel, {

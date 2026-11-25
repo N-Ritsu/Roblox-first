@@ -29,6 +29,8 @@ export type Profile = {
 	reputation: number, -- 店の評判 0〜100
 	lastSeen: number, -- 最後に保存した時刻（os.time）
 	designSales: { [string]: number }, -- デザインごとの売れた数
+	homePublic: boolean, -- 自宅を他の人に公開するか
+	homeLikes: number, -- 自宅がもらった「いいね」の数
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -76,6 +78,8 @@ local function defaultProfile(): Profile
 		reputation = 10,
 		lastSeen = 0,
 		designSales = {},
+		homePublic = true,
+		homeLikes = 0,
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,
