@@ -50,7 +50,7 @@ local function showDaily(gui: ScreenGui, streak: number, reward: number, tomorro
 	local card = UI.Frame(gui, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.45),
-		Size = UDim2.new(0, 300, 0, 190),
+		Size = UDim2.new(0, 300, 0, 214),
 	})
 	UI.Corner(card, 16)
 	UI.Stroke(card, UI.Colors.Coin, 4)
@@ -64,6 +64,20 @@ local function showDaily(gui: ScreenGui, streak: number, reward: number, tomorro
 		Size = UDim2.new(1, -20, 0, 24),
 		Position = UDim2.new(0, 10, 0, 98),
 	})
+	-- 7日分の印（7日目で最大の額になる。7日目以降は全部ついたまま）
+	local filled = math.min(streak, 7)
+	for i = 1, 7 do
+		local dot = UI.Frame(card, {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, (i - 4) * 30, 0, 138),
+			Size = if i == 7 then UDim2.new(0, 22, 0, 22) else UDim2.new(0, 16, 0, 16),
+			BackgroundColor3 = if i <= filled then UI.Colors.Coin else Color3.fromRGB(220, 220, 220),
+		})
+		UI.Corner(dot, 11)
+		if i == 7 then
+			UI.Stroke(dot, Color3.fromRGB(210, 140, 20), 2)
+		end
+	end
 	local ok = UI.Button(card, "やったね！", UI.Colors.Good, { Size = UDim2.new(0, 160, 0, 40), Position = UDim2.new(0.5, -80, 1, -52) })
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.6
