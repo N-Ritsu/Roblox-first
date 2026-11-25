@@ -46,16 +46,12 @@ ShopUpgrades.Awnings = {
 -- 自宅の壁・床：お店と同じ選択肢を使い、一度買えばお店と自宅の両方で使える
 -- "Default" は自宅のはじめの色（color = nil）
 ShopUpgrades.HomeWalls = { { id = "Default", name = "はじめの色", color = nil, price = 0 } } :: { any }
-for i, entry in ShopUpgrades.Walls do
-	if i > 1 then
-		table.insert(ShopUpgrades.HomeWalls, entry)
-	end
+for _, entry in ShopUpgrades.Walls do
+	table.insert(ShopUpgrades.HomeWalls, entry) -- お店のはじめの色（無料）も自宅で選べる
 end
 ShopUpgrades.HomeFloors = { { id = "Default", name = "はじめの床", color = nil, price = 0 } } :: { any }
-for i, entry in ShopUpgrades.Floors do
-	if i > 1 then
-		table.insert(ShopUpgrades.HomeFloors, entry)
-	end
+for _, entry in ShopUpgrades.Floors do
+	table.insert(ShopUpgrades.HomeFloors, entry)
 end
 -- 持っているかの記録（ownedInterior のキー）に使う種類名
 ShopUpgrades.OwnedKind = { wall = "wall", floor = "floor", awning = "awning", sign = "sign", homeWall = "wall", homeFloor = "floor" } :: { [string]: string }
@@ -96,13 +92,13 @@ ShopUpgrades.HomeWallById = index(ShopUpgrades.HomeWalls)
 ShopUpgrades.HomeFloorById = index(ShopUpgrades.HomeFloors)
 ShopUpgrades.HomeLightById = index(ShopUpgrades.HomeLights)
 
--- 次の陳列台の値段（もう増やせなければ nil）
 -- 背景色の上で読みやすい文字色
 function ShopUpgrades.TextColorOn(color: Color3): Color3
 	local luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114
 	return if luminance > 0.62 then Color3.fromRGB(45, 40, 35) else Color3.new(1, 1, 1)
 end
 
+-- 次の陳列台の値段（もう増やせなければ nil）
 function ShopUpgrades.NextShelfPrice(current: number): number?
 	return ShopUpgrades.ShelfPrices[current - ShopUpgrades.BaseShelves + 1]
 end
