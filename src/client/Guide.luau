@@ -136,6 +136,27 @@ function Guide.Start()
 	Net.Event("DailyBonus").OnClientEvent:Connect(function(streak: number, reward: number, tomorrow: number)
 		showDaily(gui, streak, reward, tomorrow)
 	end)
+
+	-- 留守中の売上
+	Net.Event("OfflineSales").OnClientEvent:Connect(function(count: number, earned: number)
+		local card = UI.Frame(gui, {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0.72, 0),
+			Size = UDim2.new(0, 320, 0, 70),
+			BackgroundColor3 = Color3.fromRGB(230, 250, 230),
+		})
+		UI.Corner(card, 14)
+		UI.Stroke(card, UI.Colors.Good, 3)
+		UI.Label(card, ("留守の間に %d 個売れました！"):format(count), { Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 10, 0, 6) })
+		UI.Label(card, ("+%d コイン"):format(earned), {
+			Size = UDim2.new(1, -20, 0, 28),
+			Position = UDim2.new(0, 10, 0, 36),
+			TextColor3 = Color3.fromRGB(210, 140, 20),
+		})
+		task.delay(7, function()
+			card:Destroy()
+		end)
+	end)
 end
 
 return Guide

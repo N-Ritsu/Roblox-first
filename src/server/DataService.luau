@@ -27,6 +27,7 @@ export type Profile = {
 	ownedInterior: { [string]: boolean }, -- 買った内装（"wall:Mint" など）
 	goalsClaimed: { [string]: boolean }, -- 報酬を受け取った目標
 	reputation: number, -- 店の評判 0〜100
+	lastSeen: number, -- 最後に保存した時刻（os.time）
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -72,6 +73,7 @@ local function defaultProfile(): Profile
 		ownedInterior = {},
 		goalsClaimed = {},
 		reputation = 10,
+		lastSeen = 0,
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,
@@ -168,6 +170,7 @@ local function save(player: Player, release: boolean?)
 			local data = profile :: any
 			data.lockJobId = if release then nil else game.JobId
 			data.lockTime = os.time()
+			data.lastSeen = os.time() -- 留守中の売上の計算に使う
 			return data
 		end)
 	end)

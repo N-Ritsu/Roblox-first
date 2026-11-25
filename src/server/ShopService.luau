@@ -127,6 +127,60 @@ function ShopService.AddReputation(player: Player, amount: number)
 	end
 end
 
+-- 留守中の売上：前回から経った時間に応じて、陳列中の商品が少しずつ売れていたことにする
+ShopService.OfflineSaleInterval = 600 -- 10分に1回、どれかの棚で売れる
+ShopService.OfflineMaxSeconds = 8 * 3600 -- 8時間分まで
+local offlineEvent = Net.Event("OfflineSales")
+
+function ShopService.OfflineSales(player: Player, profile: any)
+	local lastSeen = tonumber(profile.lastSeen) or 0
+	if lastSeen <= 0 then
+		return
+	end
+	local elapsed = math.clamp(os.time() - lastSeen, 0, ShopService.OfflineMaxSeconds)
+	local chances = math.floor(elapsed / ShopService.OfflineSaleInterval)
+	if chances <= 0 then
+		return
+	end
+	local slots = {}
+	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
+		if profile.shelves[tostring(slot)] then
+			table.insert(slots, slot)
+		end
+	end
+	if #slots == 0 then
+		return
+	end
+	local random = Random.new()
+	local count, earned = 0, 0
+	for i = 1, chances do
+		local shelf = profile.shelves[tostring(slots[(i - 1) % #slots + 1])]
+		local design = profile.designs[shelf.designId]
+		local stock = profile.stock[shelf.designId] or 0
+		if design and stock > 0 then
+			-- 相場より高い商品は売れにくい（留守中はお客さんの好みは考えない）
+			local value = ItemBuilder.Value(design)
+			local chance = if shelf.price <= value then 0.8 elseif shelf.price <= value * 1.3 then 0.5 elseif shelf.price <= value * 1.6 then 0.2 else 0
+			if random:NextNumber() < chance then
+				profile.stock[shelf.designId] = stock - 1
+				count += 1
+				earned += shelf.price
+			end
+		end
+	end
+	if count == 0 then
+		return
+	end
+	profile.stats.sold += count
+	profile.stats.earned += earned
+	DataService.AddCoins(player, earned)
+	task.delay(5, function()
+		if player.Parent then
+			offlineEvent:FireClient(player, count, earned)
+		end
+	end)
+end
+
 -- 店主の棚の表示を作り直す
 function ShopService.Render(player: Player)
 	local plot = PlotService.Get(player)
@@ -435,7 +489,8 @@ function ShopService.Start()
 	PlotService.Assigned:Connect(function(player)
 		ShopService.Render(player)
 	end)
-	DataService.OnLoaded(function(player)
+	DataService.OnLoaded(function(player, profile)
+		ShopService.OfflineSales(player, profile)
 		ShopService.Render(player)
 	end)
 	PlotService.Released:Connect(function(_, plot)
