@@ -124,6 +124,7 @@ render = function()
 		{ kind = "wall", title = "壁の色", list = ShopUpgrades.Walls, current = profile.interior.wall },
 		{ kind = "floor", title = "床", list = ShopUpgrades.Floors, current = profile.interior.floor },
 		{ kind = "awning", title = "ひさしの色", list = ShopUpgrades.Awnings, current = profile.interior.awning or "Default" },
+		{ kind = "sign", title = "看板の色", list = ShopUpgrades.Signs, current = profile.interior.sign or "Default" },
 	}
 	for i, section in sections do
 		heading(section.title, 10 * i)

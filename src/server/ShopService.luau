@@ -54,7 +54,7 @@ local function setPromptText(plot: PlotService.Plot, slot: number, text: string?
 end
 
 -- 使える陳列台の数と内装を区画に反映する
-local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: string, floorId: string, awningId: string?)
+local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: string, floorId: string, awningId: string?, signId: string?)
 	for slot = 1, ShopService.SlotCount do
 		local tablePart = plot.model:FindFirstChild("ShelfTable" .. slot) :: BasePart?
 		if tablePart then
@@ -89,6 +89,16 @@ local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: s
 			if part.Name == "AwningColor" and part:IsA("BasePart") then
 				part.Color = awningColor
 			end
+		end
+	end
+	local sign = ShopUpgrades.SignById[signId or "Default"] or ShopUpgrades.Signs[1]
+	local signPart = plot.model:FindFirstChild("Sign")
+	if signPart and signPart:IsA("BasePart") then
+		signPart.Color = sign.color
+		local gui = signPart:FindFirstChildOfClass("SurfaceGui")
+		local label = gui and gui:FindFirstChild("Text")
+		if label and label:IsA("TextLabel") then
+			label.TextColor3 = ShopUpgrades.TextColorOn(sign.color)
 		end
 	end
 end
@@ -246,7 +256,7 @@ function ShopService.Render(player: Player)
 		end
 	end
 	plot.model:SetAttribute("OnSale", onSale)
-	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor, profile.interior.awning)
+	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor, profile.interior.awning, profile.interior.sign)
 	local best = bestSeller(profile)
 	updateSign(player)
 	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
@@ -518,7 +528,7 @@ local function setInterior(player: Player, kind: any, id: any): (boolean, string
 	if not profile then
 		return false, "データを読み込み中です"
 	end
-	local list = if kind == "wall" then ShopUpgrades.WallById elseif kind == "floor" then ShopUpgrades.FloorById elseif kind == "awning" then ShopUpgrades.AwningById else nil
+	local list = if kind == "wall" then ShopUpgrades.WallById elseif kind == "floor" then ShopUpgrades.FloorById elseif kind == "awning" then ShopUpgrades.AwningById elseif kind == "sign" then ShopUpgrades.SignById else nil
 	local entry = list and type(id) == "string" and (list :: any)[id]
 	if not entry then
 		return false, "見つかりません"

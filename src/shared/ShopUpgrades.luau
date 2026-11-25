@@ -43,6 +43,19 @@ ShopUpgrades.Awnings = {
 	{ id = "Gold", name = "金", color = Color3.fromRGB(240, 190, 60), price = 200 },
 } :: { AwningStyle }
 
+-- 看板の板の色（文字は明るさに合わせて白か黒になる）
+export type SignStyle = { id: string, name: string, color: Color3, price: number }
+ShopUpgrades.Signs = {
+	{ id = "Default", name = "木の色", color = Color3.fromRGB(120, 80, 55), price = 0 },
+	{ id = "Black", name = "黒板", color = Color3.fromRGB(40, 55, 50), price = 40 },
+	{ id = "White", name = "白", color = Color3.fromRGB(245, 245, 240), price = 40 },
+	{ id = "Red", name = "赤", color = Color3.fromRGB(200, 60, 60), price = 40 },
+	{ id = "Navy", name = "紺", color = Color3.fromRGB(40, 60, 120), price = 60 },
+	{ id = "Mint", name = "ミント", color = Color3.fromRGB(150, 225, 195), price = 60 },
+	{ id = "Pink", name = "ピンク", color = Color3.fromRGB(245, 160, 195), price = 60 },
+	{ id = "Gold", name = "金", color = Color3.fromRGB(235, 185, 60), price = 200 },
+} :: { SignStyle }
+
 local function index<T>(list: { T }): { [string]: T }
 	local map = {}
 	for _, entry in list do
@@ -53,8 +66,15 @@ end
 ShopUpgrades.WallById = index(ShopUpgrades.Walls)
 ShopUpgrades.FloorById = index(ShopUpgrades.Floors)
 ShopUpgrades.AwningById = index(ShopUpgrades.Awnings)
+ShopUpgrades.SignById = index(ShopUpgrades.Signs)
 
 -- 次の陳列台の値段（もう増やせなければ nil）
+-- 背景色の上で読みやすい文字色
+function ShopUpgrades.TextColorOn(color: Color3): Color3
+	local luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114
+	return if luminance > 0.62 then Color3.fromRGB(45, 40, 35) else Color3.new(1, 1, 1)
+end
+
 function ShopUpgrades.NextShelfPrice(current: number): number?
 	return ShopUpgrades.ShelfPrices[current - ShopUpgrades.BaseShelves + 1]
 end
