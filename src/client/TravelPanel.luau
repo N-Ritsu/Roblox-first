@@ -83,6 +83,7 @@ local function render()
 						name = owner.DisplayName,
 						stars = tonumber(plot:GetAttribute("Stars")) or 1,
 						onSale = tonumber(plot:GetAttribute("OnSale")) or 0,
+						featured = plot:GetAttribute("Featured"),
 					})
 				end
 			end
@@ -101,7 +102,11 @@ local function render()
 	for i, entry in entries do
 		local stars = string.rep("★", entry.stars) .. string.rep("☆", 5 - entry.stars)
 		local text = ("%s のお店 %s ・ %s"):format(entry.name, stars, if entry.onSale > 0 then ("%d品 販売中"):format(entry.onSale) else "準備中")
-		local button = UI.Button(list, text, Color3.fromRGB(205, 150, 110), { Size = UDim2.new(1, -12, 0, 40), LayoutOrder = 10 + i })
+		local hasFeatured = type(entry.featured) == "string" and entry.featured ~= ""
+		if hasFeatured then
+			text ..= ("\n看板商品「%s」"):format(entry.featured)
+		end
+		local button = UI.Button(list, text, Color3.fromRGB(205, 150, 110), { Size = UDim2.new(1, -12, 0, if hasFeatured then 52 else 40), LayoutOrder = 10 + i })
 		button.Activated:Connect(function()
 			go(entry.userId)
 		end)

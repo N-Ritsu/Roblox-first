@@ -107,6 +107,7 @@ local function clearDisplays(plot: PlotService.Plot)
 	displayFolder(plot):ClearAllChildren()
 	plot.model:SetAttribute("OnSale", nil)
 	plot.model:SetAttribute("Stars", nil)
+	plot.model:SetAttribute("Featured", nil)
 	for slot = 1, ShopService.SlotCount do
 		setPromptText(plot, slot, nil)
 	end
@@ -265,6 +266,7 @@ function ShopService.Render(player: Player)
 	updateSign(player)
 	-- 屋根の上の看板商品（クライアントの DecorFun がゆっくり回す）
 	local featured = profile.designs[profile.featured]
+	plot.model:SetAttribute("Featured", if featured and not featured.boughtFrom then featured.name else nil) -- お店めぐりの一覧用
 	if featured and not featured.boughtFrom then
 		local item = ItemBuilder.BuildFitted(featured, ShopService.FeaturedSize)
 		item.Name = "Featured"
