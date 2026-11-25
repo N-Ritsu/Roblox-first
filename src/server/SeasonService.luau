@@ -90,13 +90,50 @@ local function buildSnow(parent: Instance)
 	snow.Parent = cloud
 end
 
+-- ツリーのまわりの雪だるまとプレゼント箱（position は地面の高さ）
+local function buildExtras(parent: Instance, position: Vector3)
+	local extras = Instance.new("Model")
+	extras.Name = "WinterExtras"
+	-- 通路をふさがないよう、広場の中心から見て横（外周に沿う向き）に雪だるまを置く
+	local outward = Vector3.new(position.X, 0, position.Z)
+	outward = if outward.Magnitude > 0 then outward.Unit else Vector3.new(0, 0, 1)
+	local side = Vector3.new(-outward.Z, 0, outward.X)
+	for _, sign in { -1, 1 } do
+		local at = position + side * (7.5 * sign)
+		local face = CFrame.lookAt(at, at - outward) -- 広場の中心を向く
+		Build.Part(extras, { Name = "SnowBody", Size = Vector3.new(3.4, 3.4, 3.4), CFrame = face * CFrame.new(0, 1.6, 0), Color = Color3.fromRGB(250, 252, 255), Material = Enum.Material.Snow, Shape = Enum.PartType.Ball })
+		Build.Part(extras, { Name = "SnowHead", Size = Vector3.new(2.3, 2.3, 2.3), CFrame = face * CFrame.new(0, 4.1, 0), Color = Color3.fromRGB(250, 252, 255), Material = Enum.Material.Snow, Shape = Enum.PartType.Ball })
+		for _, x in { -0.4, 0.4 } do
+			Build.Part(extras, { Name = "Eye", Size = Vector3.new(0.3, 0.3, 0.3), CFrame = face * CFrame.new(x, 4.4, -1.05), Color = Color3.fromRGB(30, 30, 35), Shape = Enum.PartType.Ball, CanCollide = false })
+		end
+		-- にんじんの鼻（前に向けた細い円柱）
+		Build.Part(extras, { Name = "Nose", Size = Vector3.new(0.8, 0.3, 0.3), CFrame = face * CFrame.new(0, 4.1, -1.35) * CFrame.Angles(0, math.rad(90), 0), Color = Color3.fromRGB(245, 140, 40), Shape = Enum.PartType.Cylinder, CanCollide = false })
+		-- マフラー
+		Build.Part(extras, { Name = "Scarf", Size = Vector3.new(0.5, 2.3, 2.3), CFrame = face * CFrame.new(0, 3.05, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = if sign < 0 then Color3.fromRGB(200, 40, 50) else Color3.fromRGB(40, 120, 70), Material = Enum.Material.Fabric, Shape = Enum.PartType.Cylinder, CanCollide = false })
+	end
+	-- プレゼント箱（ツリーの下）
+	local giftColors = { Color3.fromRGB(200, 40, 55), Color3.fromRGB(60, 130, 220), Color3.fromRGB(250, 205, 70), Color3.fromRGB(40, 140, 80), Color3.fromRGB(170, 90, 210) }
+	local random = Random.new(12)
+	for i = 1, 5 do
+		local angle = (i - 1) / 5 * math.pi * 2 + 0.4
+		local size = random:NextNumber(1.2, 1.9)
+		local cf = CFrame.new(position + Vector3.new(math.cos(angle) * 3.3, size / 2, math.sin(angle) * 3.3)) * CFrame.Angles(0, random:NextNumber(0, math.pi), 0)
+		Build.Part(extras, { Name = "Gift", Size = Vector3.new(size, size, size), CFrame = cf, Color = giftColors[i], Material = Enum.Material.SmoothPlastic })
+		Build.Part(extras, { Name = "Ribbon", Size = Vector3.new(size + 0.05, size + 0.05, 0.25), CFrame = cf, Color = Color3.fromRGB(250, 250, 250), Material = Enum.Material.SmoothPlastic, CanCollide = false })
+		Build.Part(extras, { Name = "Ribbon", Size = Vector3.new(0.25, size + 0.05, size + 0.05), CFrame = cf, Color = Color3.fromRGB(250, 250, 250), Material = Enum.Material.SmoothPlastic, CanCollide = false })
+	end
+	extras.Parent = parent
+end
+
 local decor: Folder? = nil
 
 local function setDecor(active: boolean)
 	if active and not decor then
 		local folder = Instance.new("Folder")
 		folder.Name = "WinterDecor"
-		buildTree(folder, WorldService.SpotPosition(WorldService.SeasonSpot, 22) + Vector3.new(0, 0.4, 0)) -- ベンチを置いていない外周の場所
+		local spot = WorldService.SpotPosition(WorldService.SeasonSpot, 22) + Vector3.new(0, 0.4, 0) -- ベンチを置いていない外周の場所
+		buildTree(folder, spot)
+		buildExtras(folder, spot)
 		buildSnow(folder)
 		folder.Parent = workspace
 		decor = folder
