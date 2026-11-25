@@ -85,6 +85,8 @@ end
 
 local function clearDisplays(plot: PlotService.Plot)
 	displayFolder(plot):ClearAllChildren()
+	plot.model:SetAttribute("OnSale", nil)
+	plot.model:SetAttribute("Stars", nil)
 	for slot = 1, ShopService.SlotCount do
 		setPromptText(plot, slot, nil)
 	end
@@ -108,6 +110,7 @@ local function updateSign(player: Player)
 	local plot = PlotService.Get(player)
 	if plot then
 		plot.signLabel.Text = ("%s のお店 %s"):format(player.DisplayName, starText(ShopService.Stars(player)))
+		plot.model:SetAttribute("Stars", ShopService.Stars(player)) -- お店めぐりの一覧で使う
 	end
 end
 
@@ -190,6 +193,15 @@ function ShopService.Render(player: Player)
 	end
 	local folder = displayFolder(plot)
 	folder:ClearAllChildren()
+	-- お店めぐりの一覧用：在庫のある棚の数
+	local onSale = 0
+	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
+		local shelf = profile.shelves[tostring(slot)]
+		if shelf and profile.designs[shelf.designId] and (profile.stock[shelf.designId] or 0) > 0 then
+			onSale += 1
+		end
+	end
+	plot.model:SetAttribute("OnSale", onSale)
 	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor)
 	updateSign(player)
 	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do

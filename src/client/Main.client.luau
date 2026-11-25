@@ -8,6 +8,7 @@ local modules = {
 	"PartShop",
 	"ShopPanel",
 	"GoalsPanel",
+	"TravelPanel",
 	"Guide",
 	"HomePanel",
 	"Prompts", -- Plots を待つので最後
