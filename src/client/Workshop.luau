@@ -315,18 +315,20 @@ local function buildControls()
 	end
 
 	-- 向き：よく使う向きはワンタッチで（円柱は横向きが基本なので「立てる」が便利）
-	local presetGrid = section("向き（かんたん）")
-	local presets = {
-		{ text = "立てる", rot = { 2, 2 } },
-		{ text = "横向き", rot = { 0, 0 } },
-		{ text = "前後向き", rot = { 0, 2 } },
-	}
-	for i, preset in presets do
-		local active = part.rot[1] == preset.rot[1] and part.rot[2] == preset.rot[2]
-		choiceButton(presetGrid, preset.text, active, true, i, function()
-			part.rot = { preset.rot[1], preset.rot[2] }
-			refresh()
-		end)
+	if part.shape == "Cylinder" then
+		local presetGrid = section("円柱の向き（かんたん）")
+		local presets = {
+			{ text = "立てる", rot = { 2, 2 } },
+			{ text = "横向き", rot = { 0, 0 } },
+			{ text = "前後向き", rot = { 0, 2 } },
+		}
+		for i, preset in presets do
+			local active = part.rot[1] == preset.rot[1] and part.rot[2] == preset.rot[2]
+			choiceButton(presetGrid, preset.text, active, true, i, function()
+				part.rot = { preset.rot[1], preset.rot[2] }
+				refresh()
+			end)
+		end
 	end
 	local rotSection = stepperSection("向き（細かく）")
 	for axis, label in { "たて回転", "よこ回転" } do

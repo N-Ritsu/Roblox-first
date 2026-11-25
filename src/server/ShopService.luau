@@ -370,6 +370,18 @@ local function setShelf(player: Player, slot: any, designId: any, price: any): (
 	return true, "棚に並べました！"
 end
 
+-- 同じデザインでも形が変わっていたら別のアイテムとして扱うための目印（フィールド順を固定して作る）
+local function partsFingerprint(parts: any): string
+	local pieces = {}
+	for _, part in parts do
+		table.insert(pieces, table.concat({
+			part.shape, part.color, part.material,
+			table.concat(part.size, ","), table.concat(part.pos, ","), table.concat(part.rot, ","),
+		}, "/"))
+	end
+	return table.concat(pieces, ";")
+end
+
 -- 他のプレイヤーの店の棚から買う。買ったアイテムは自宅に飾れる（作り直し・転売はできない）
 ShopService.MaxBought = 30
 local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): (boolean, string)
@@ -416,11 +428,11 @@ local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): 
 		return false, "棚に近づいてから買ってください"
 	end
 	-- 同じ店の同じ商品は1つのアイテムとしてまとめる
-	local sourceKey = seller.UserId .. ":" .. shelf.designId
+	local sourceKey = seller.UserId .. ":" .. shelf.designId .. ":" .. partsFingerprint(design.parts)
 	local targetId: string? = nil
 	local boughtCount = 0
 	for id, d in buyerProfile.designs do
-		if d.boughtFrom then
+		if d.boughtFrom and not d.gift then -- プレゼントは別枠
 			boughtCount += 1
 			if d.sourceKey == sourceKey then
 				targetId = id
@@ -578,6 +590,9 @@ end
 
 -- プレゼント：自分の在庫のアイテムを1つ、同じサーバーの人に贈る（受け取った人は自宅に飾れる）
 local lastGift: { [Player]: number } = {}
+local lastGiftTo: { [Player]: number } = {}
+ShopService.MaxGifts = 30
+ShopService.MaxGiftKindsPerSender = 3
 local giftEvent = Net.Event("GiftReceived")
 local function gift(sender: Player, targetUserId: any, designId: any): (boolean, string)
 	local now = os.clock()
@@ -604,21 +619,30 @@ local function gift(sender: Player, targetUserId: any, designId: any): (boolean,
 	if stock <= 0 then
 		return false, "在庫がありません。工房で作りましょう"
 	end
-	local sourceKey = sender.UserId .. ":" .. designId
+	-- 受け取る側の迷惑にならないよう：プレゼントは別枠で30種類まで、同じ人からは3種類まで、受け取りは2秒に1回まで
+	if lastGiftTo[target] and now - lastGiftTo[target] < 2 then
+		return false, "相手が受け取り中です。少し待ってからどうぞ"
+	end
+	local senderPrefix = sender.UserId .. ":"
+	local sourceKey = senderPrefix .. designId .. ":" .. partsFingerprint(design.parts)
 	local targetId: string? = nil
-	local boughtCount = 0
+	local giftCount, fromSender = 0, 0
 	for id, d in targetProfile.designs do
-		if d.boughtFrom then
-			boughtCount += 1
+		if d.gift then
+			giftCount += 1
+			if type(d.sourceKey) == "string" and string.sub(d.sourceKey, 1, #senderPrefix) == senderPrefix then
+				fromSender += 1
+			end
 			if d.sourceKey == sourceKey then
 				targetId = id
 			end
 		end
 	end
-	if not targetId and boughtCount >= ShopService.MaxBought then
-		return false, "相手のアイテム置き場がいっぱいです"
+	if not targetId and (giftCount >= ShopService.MaxGifts or fromSender >= ShopService.MaxGiftKindsPerSender) then
+		return false, "これ以上この人には新しい種類を贈れません"
 	end
 	lastGift[sender] = now
+	lastGiftTo[target] = now
 	senderProfile.stock[designId] = stock - 1
 	if not targetId then
 		targetId = "d" .. targetProfile.nextDesignId
@@ -628,6 +652,7 @@ local function gift(sender: Player, targetUserId: any, designId: any): (boolean,
 			parts = HttpService:JSONDecode(HttpService:JSONEncode(design.parts)),
 			boughtFrom = sender.DisplayName,
 			sourceKey = sourceKey,
+			gift = true,
 		}
 	end
 	local id = targetId :: string
@@ -695,6 +720,7 @@ function ShopService.Start()
 		lastSlogan[player] = nil
 		flyerUntil[player] = nil
 		lastGift[player] = nil
+		lastGiftTo[player] = nil
 	end)
 end
 

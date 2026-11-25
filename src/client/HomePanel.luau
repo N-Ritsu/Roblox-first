@@ -22,6 +22,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 local setCellRemote = Net.Function("SetHomeCell")
 local publicRemote = Net.Function("SetHomePublic")
 local expandRemote = Net.Function("ExpandHome")
+local deleteRemote = Net.Function("DeleteDesign")
+local discardArmed: string? = nil
 local publicButton: TextButton
 
 local panel: Frame
@@ -156,11 +158,36 @@ local function render()
 	for i, id in ids do
 		local design = profile.designs[id]
 		local stock = profile.stock[id] or 0
-		local label = if design.boughtFrom then ("%s（%s さんの店）"):format(design.name, design.boughtFrom) else design.name
+		local label = if design.gift then ("%s（%s さんから）"):format(design.name, design.boughtFrom) elseif design.boughtFrom then ("%s（%s さんの店）"):format(design.name, design.boughtFrom) else design.name
 		local button = UI.Button(list, ("%s を置く（%d）"):format(label, stock), if stock > 0 then UI.Colors.Good else UI.Colors.Muted, {
 			Size = UDim2.new(1, -12, 0, 34),
-			LayoutOrder = 10 + i,
+			LayoutOrder = 10 + i * 2,
 		})
+		if design.boughtFrom then
+			-- 買った・もらったアイテムを手放す（2回押しで確定）
+			local armed = discardArmed == id
+			local discard = UI.Button(list, if armed then "本当に捨てる？（もう一度押す）" else ("「%s」を捨てる"):format(design.name), UI.Colors.Muted, {
+				Size = UDim2.new(1, -12, 0, 28),
+				LayoutOrder = 11 + i * 2,
+			})
+			discard.Activated:Connect(function()
+				if discardArmed ~= id then
+					discardArmed = id
+					render()
+					return
+				end
+				discardArmed = nil
+				if busy then
+					return
+				end
+				busy = true
+				local ok, result = pcall(function()
+					return deleteRemote:InvokeServer(id)
+				end)
+				busy = false
+				toast(if ok and result then "捨てました" else "捨てられませんでした", if ok and result then nil else UI.Colors.Accent)
+			end)
+		end
 		button.Activated:Connect(function()
 			if stock <= 0 then
 				toast("在庫がありません。工房で作りましょう", UI.Colors.Accent)
