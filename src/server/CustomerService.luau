@@ -53,7 +53,7 @@ type Customer = {
 
 local active: { [number]: number } = {} -- 区画番号 → 店内にいるお客さんの数
 
-local function makeCustomer(position: Vector3, rich: boolean, scale: number?): Customer
+local function makeCustomer(position: Vector3, rich: boolean, scale: number?, style: string?): Customer
 	local model = Instance.new("Model")
 	model.Name = "Customer"
 	local base = CFrame.new(position)
@@ -61,7 +61,7 @@ local function makeCustomer(position: Vector3, rich: boolean, scale: number?): C
 		Name = "Body",
 		Size = Vector3.new(2.6, 1.9, 1.9),
 		CFrame = base * CFrame.new(0, 1.4, 0) * CFrame.Angles(0, 0, math.rad(90)),
-		Color = SHIRTS[random:NextInteger(1, #SHIRTS)],
+		Color = if style == "santa" then Color3.fromRGB(200, 30, 40) else SHIRTS[random:NextInteger(1, #SHIRTS)],
 		Shape = Enum.PartType.Cylinder,
 		CanCollide = false,
 	})
@@ -83,7 +83,43 @@ local function makeCustomer(position: Vector3, rich: boolean, scale: number?): C
 			CanCollide = false,
 		})
 	end
-	if rich then
+	if style == "santa" then
+		-- サンタさん：白いひげと、白いふちの赤い帽子（パーツだけで作る）
+		Build.Part(model, {
+			Name = "Beard",
+			Size = Vector3.new(1.5, 1.5, 1.5),
+			CFrame = base * CFrame.new(0, 2.85, -0.55),
+			Color = Color3.fromRGB(250, 250, 250),
+			Shape = Enum.PartType.Ball,
+			CanCollide = false,
+		})
+		Build.Part(model, {
+			Name = "HatBrim",
+			Size = Vector3.new(0.5, 2, 2),
+			CFrame = base * CFrame.new(0, 4.15, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(250, 250, 250),
+			Material = Enum.Material.Fabric,
+			Shape = Enum.PartType.Cylinder,
+			CanCollide = false,
+		})
+		Build.Part(model, {
+			Name = "Hat",
+			Size = Vector3.new(1.2, 1.5, 1.5),
+			CFrame = base * CFrame.new(0, 4.9, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(200, 30, 40),
+			Material = Enum.Material.Fabric,
+			Shape = Enum.PartType.Cylinder,
+			CanCollide = false,
+		})
+		Build.Part(model, {
+			Name = "HatBall",
+			Size = Vector3.new(0.7, 0.7, 0.7),
+			CFrame = base * CFrame.new(0, 5.7, 0),
+			Color = Color3.fromRGB(250, 250, 250),
+			Shape = Enum.PartType.Ball,
+			CanCollide = false,
+		})
+	elseif rich then
 		-- お金持ち：金色のシルクハットと、きらきら
 		Build.Part(model, {
 			Name = "HatBrim",
@@ -129,7 +165,7 @@ local function makeCustomer(position: Vector3, rich: boolean, scale: number?): C
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.new(0, 190, 0, 44)
-	billboard.StudsOffset = Vector3.new(0, if rich then 3.6 else 2, 0) -- お金持ちは帽子が高いので上に
+	billboard.StudsOffset = Vector3.new(0, if rich or style == "santa" then 3.6 else 2, 0) -- お金持ちは帽子が高いので上に
 	billboard.MaxDistance = 60
 	billboard.LightInfluence = 0
 	local bubble = Instance.new("TextLabel")
@@ -280,6 +316,20 @@ CustomerService.CollectorChance = 0.1
 CustomerService.ChildCheapPrice = 25 -- 子どもはこれ以下の値段だと喜んで買う
 CustomerService.CollectorMinParts = 5 -- コレクターはこれ以上の部品のアイテムが好き
 
+-- 冬のお客さん：サンタさん（冬の期間だけ）。冬の限定色を使った品が大好き
+CustomerService.SantaChance = 0.05
+CustomerService.SantaBonus = 2
+
+local function usesWinterColor(design: any): boolean
+	for _, part in design.parts do
+		local color = Catalog.ColorById[part.color]
+		if color and color.season == "winter" then
+			return true
+		end
+	end
+	return false
+end
+
 local function decide(design: any, price: number, preference: Preference?, rich: boolean, kind: string?): (boolean, string)
 	local value = ItemBuilder.Value(design)
 	local range = if rich then CustomerService.RichWillingnessRange else CustomerService.WillingnessRange
@@ -289,6 +339,11 @@ local function decide(design: any, price: number, preference: Preference?, rich:
 			willing *= 1.5
 		else
 			willing *= 0.7 -- おこづかいが少ない
+		end
+	elseif kind == "santa" and usesWinterColor(design) then
+		willing *= CustomerService.SantaBonus
+		if price <= willing then
+			return true, "ホッホッホー！冬にぴったりの品だ！"
 		end
 	elseif kind == "collector" and #design.parts >= CustomerService.CollectorMinParts then
 		willing *= 1.6
@@ -336,7 +391,10 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 		elseif roll < CustomerService.RichChance + CustomerService.ChildChance then "child"
 		elseif roll < CustomerService.RichChance + CustomerService.ChildChance + CustomerService.CollectorChance then "collector"
 		else nil
-	local customer = makeCustomer(start, rich, if kind == "child" then 0.7 else 1)
+	if not kind and Season.IsActive("winter") and random:NextNumber() < CustomerService.SantaChance then
+		kind = "santa"
+	end
+	local customer = makeCustomer(start, rich, if kind == "child" then 0.7 else 1, kind)
 	ctx.model = customer.model
 	local function finish()
 		customer.model:Destroy()
@@ -356,6 +414,9 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 		say(customer, ("%d コインくらいで買えるものある？"):format(CustomerService.ChildCheapPrice))
 	elseif kind == "collector" then
 		say(customer, ("部品が%d個以上の凝った品を探しています"):format(CustomerService.CollectorMinParts))
+	elseif kind == "santa" then
+		say(customer, "ホッホッホー！冬の色の品はあるかな？")
+		noticeEvent:FireClient(owner, "サンタさんが来た！ 冬の限定色の品が大好き")
 	elseif preference then
 		say(customer, preference.text)
 	end
