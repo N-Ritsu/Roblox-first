@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SocialService = game:GetService("SocialService")
 
 local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
 local UI = require(script.Parent:WaitForChild("UI"))
@@ -49,6 +50,20 @@ local function render()
 	plaza.Activated:Connect(function()
 		go("plaza")
 	end)
+	-- フレンドを招待する（Roblox 標準の招待画面）
+	local invite = UI.Button(list, "フレンドを招待する", Color3.fromRGB(240, 150, 60), { Size = UDim2.new(1, -12, 0, 40), LayoutOrder = 2 })
+	invite.Activated:Connect(function()
+		local ok, canInvite = pcall(function()
+			return SocialService:CanSendGameInviteAsync(player)
+		end)
+		if ok and canInvite then
+			pcall(function()
+				SocialService:PromptGameInvite(player)
+			end)
+		else
+			UI.Toast(playerGui, "いまは招待できません", UI.Colors.Accent)
+		end
+	end)
 
 	local plots = workspace:FindFirstChild("Plots")
 	local entries = {}
@@ -76,7 +91,7 @@ local function render()
 		return a.stars > b.stars
 	end)
 	if #entries == 0 then
-		UI.Label(list, "ほかのお店はまだありません", { Size = UDim2.new(1, -12, 0, 34), LayoutOrder = 2 })
+		UI.Label(list, "ほかのお店はまだありません", { Size = UDim2.new(1, -12, 0, 34), LayoutOrder = 3 })
 	end
 	for i, entry in entries do
 		local stars = string.rep("★", entry.stars) .. string.rep("☆", 5 - entry.stars)
