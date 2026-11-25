@@ -40,6 +40,7 @@ export type Profile = {
 	partyDay: number, -- おうちパーティーの報酬を数えている日（日本時間の通し日数）
 	partyCount: number, -- その日に受け取ったパーティー報酬の回数
 	ordersDone: number, -- 達成したお客さんの注文の数
+	winterSold: number, -- 冬の限定色を使った品が売れた数
 	today: { day: number, sold: number, earned: number, orders: number }, -- 今日（日本時間）の成績
 	lastDaily: number,
 	dailyStreak: number,
@@ -99,6 +100,7 @@ local function defaultProfile(): Profile
 		partyDay = 0,
 		partyCount = 0,
 		ordersDone = 0,
+		winterSold = 0,
 		today = { day = 0, sold = 0, earned = 0, orders = 0 },
 		lastDaily = 0,
 		dailyStreak = 0,

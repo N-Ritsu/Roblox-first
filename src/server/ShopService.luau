@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
+local Catalog = require(Shared:WaitForChild("Catalog"))
 local ShopUpgrades = require(Shared:WaitForChild("ShopUpgrades"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
@@ -117,6 +118,11 @@ end
 -- デザインごとの売れた数を記録する
 function ShopService.RecordSale(profile: any, designId: string, count: number)
 	profile.designSales[designId] = (profile.designSales[designId] or 0) + count
+	-- 冬の目標：冬の限定色を使った品の売れた数（お客さん・他プレイヤー・留守中すべて）
+	local design = profile.designs[designId]
+	if design and Catalog.UsesSeasonColor(design, "winter") then
+		profile.winterSold = (profile.winterSold or 0) + count
+	end
 end
 
 -- 一番売れているデザイン（3個以上売れていれば）

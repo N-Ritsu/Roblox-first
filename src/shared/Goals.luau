@@ -4,7 +4,8 @@
 
 local Catalog = require(script.Parent:WaitForChild("Catalog"))
 
-export type Goal = { id: string, text: string, target: number, reward: number, progress: (any) -> number }
+-- season があると、その季節の間だけ一覧に出す（達成済み・受け取り済みならいつでも出す）
+export type Goal = { id: string, text: string, target: number, reward: number, progress: (any) -> number, season: string? }
 
 local function ownDesigns(profile: any): number
 	local n = 0
@@ -77,6 +78,9 @@ Goals.List = {
 	end },
 	{ id = "likes50", text = "自宅に「いいね」を50個もらう", target = 50, reward = 500, progress = function(p)
 		return p.homeLikes
+	end },
+	{ id = "winter10", text = "冬の限定色を使った品を10個売る（冬の間）", target = 10, reward = 300, season = "winter", progress = function(p)
+		return p.winterSold or 0
 	end },
 	{ id = "sold200", text = "商品を200個売る", target = 200, reward = 400, progress = sold },
 	{ id = "earned5000", text = "売上を合計5000コインにする", target = 5000, reward = 500, progress = earned },

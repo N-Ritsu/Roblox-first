@@ -69,6 +69,17 @@ end
 
 Catalog.ShapeById = index(Catalog.Shapes)
 Catalog.ColorById = index(Catalog.Colors)
+
+-- その季節の限定色を使っているデザインか（"winter" など）
+function Catalog.UsesSeasonColor(design: any, season: string): boolean
+	for _, part in design.parts do
+		local color = Catalog.ColorById[part.color]
+		if color and (color :: any).season == season then
+			return true
+		end
+	end
+	return false
+end
 Catalog.MaterialById = index(Catalog.Materials)
 
 -- 種類名 → 一覧（部品ショップなどで使う）

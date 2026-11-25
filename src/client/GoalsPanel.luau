@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Goals = require(Shared:WaitForChild("Goals"))
+local Season = require(Shared:WaitForChild("Season"))
 local Net = require(Shared:WaitForChild("Net"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
@@ -74,6 +75,9 @@ local function render()
 	for i, goal in Goals.List do
 		local claimed = profile.goalsClaimed[goal.id] == true
 		local done = Goals.IsDone(goal, profile)
+		if goal.season and not claimed and not done and not Season.IsActive(goal.season) then
+			continue -- 季節の目標は、その季節の間だけ出す
+		end
 		local order = if claimed then 2000 + i elseif done then i else 1000 + i
 		local row = UI.Frame(list, {
 			Size = UDim2.new(1, -12, 0, 56),
