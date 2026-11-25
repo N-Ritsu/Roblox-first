@@ -17,22 +17,28 @@ local evictVisitors: (plot: any, owner: Player?) -> ()
 local lastRequest: { [Player]: number } = {}
 HomeService.MaxLikers = 200 -- いいねした人の記録の上限（同じ人は1回まで）
 
-local function cellKey(x: number, z: number): string
-	return x .. "_" .. z
-end
 
-local function parseCell(key: any, expanded: boolean?): (number?, number?)
+-- 置き場所のキーから、区画ローカルの置く位置を返す（床のマス "x_z" か、壁かけ "w1"〜）
+local function placement(key: any, expanded: boolean?): CFrame?
 	if type(key) ~= "string" then
-		return nil, nil
+		return nil
+	end
+	local w = tonumber(string.match(key, "^w(%d+)$"))
+	if w then
+		if w >= 1 and w <= PlotService.HomeWallSlots and key == "w" .. w then
+			return PlotService.HomeWallOffset(w)
+		end
+		return nil
 	end
 	local xs, zs = string.match(key, "^(%d+)_(%d+)$")
 	local x, z = tonumber(xs), tonumber(zs)
 	local minCell, maxCell = PlotService.HomeGridRange(expanded == true)
-	if not x or not z or x < minCell or x > maxCell or z < minCell or z > maxCell then
-		return nil, nil
+	if not x or not z or x < minCell or x > maxCell or z < minCell or z > maxCell or key ~= x .. "_" .. z then
+		return nil -- "01_02" のような別表記で同じマスに重ねて置けないようにする
 	end
-	return x, z
+	return PlotService.HomeCellOffset(x, z)
 end
+
 
 local function decorFolder(plot: PlotService.Plot): Folder
 	local home = plot.model:FindFirstChild("Home") :: Model
@@ -80,12 +86,13 @@ function HomeService.Render(player: Player)
 	setExtraCells(plot, profile.homeExpanded)
 	setLikes(plot, profile.homeLikes)
 	for key, placed in profile.home do
-		local x, z = parseCell(key, profile.homeExpanded)
+		local spot = placement(key, profile.homeExpanded)
 		local design = profile.designs[placed.designId]
-		if x and z and design then
-			local item = ItemBuilder.BuildFitted(design, PlotService.HomeCellSize - 0.5)
+		if spot and design then
+			local isWall = string.sub(key, 1, 1) == "w"
+			local item = ItemBuilder.BuildFitted(design, if isWall then 2.5 else PlotService.HomeCellSize - 0.5)
 			item.Name = key
-			item:PivotTo(plot.origin * PlotService.HomeCellOffset(x, z) * CFrame.Angles(0, math.rad((placed.rot or 0) * 90), 0))
+			item:PivotTo(plot.origin * spot * CFrame.Angles(0, math.rad((placed.rot or 0) * 90), 0))
 			item.Parent = folder
 		end
 	end
@@ -111,11 +118,10 @@ local function setCell(player: Player, key: any, action: any, designId: any): (b
 	end
 	lastRequest[player] = now
 	local profile = DataService.Get(player)
-	local x, z = parseCell(key, profile and profile.homeExpanded)
-	if not profile or not x or not z then
+	if not profile or not placement(key, profile.homeExpanded) then
 		return false, "その場所には置けません"
 	end
-	local cell = cellKey(x, z)
+	local cell = key :: string
 	local current = profile.home[cell]
 	if action == "place" then
 		if type(designId) ~= "string" or not profile.designs[designId] then

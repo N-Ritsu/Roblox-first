@@ -14,6 +14,8 @@ local UI = require(script.Parent:WaitForChild("UI"))
 local HomePanel = {}
 
 local GRID = 6 -- サーバーの PlotService.HomeGridSize と同じ
+local WALL_SLOTS = 6 -- サーバーの PlotService.HomeWallSlots と同じ
+local wallRow: Frame
 local EXPAND_PRICE = 800 -- サーバーの PlotService.HomeExpandPrice と同じ
 local gridLayout: UIGridLayout
 
@@ -61,6 +63,37 @@ local function render()
 	end
 	publicButton.Text = if profile.homePublic then ("公開中 ♥%d"):format(profile.homeLikes or 0) else "非公開"
 	publicButton.BackgroundColor3 = if profile.homePublic then UI.Colors.Good else UI.Colors.Muted
+	-- 壁かけ：奥の壁を向いたとき +X が左なので、左から w6, w5, … w1
+	for _, child in wallRow:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	for col = 1, WALL_SLOTS do
+		local key = "w" .. (WALL_SLOTS + 1 - col)
+		local placed = profile.home[key]
+		local design = placed and profile.designs[placed.designId]
+		local text = "壁"
+		local color = Color3.fromRGB(200, 175, 140)
+		if design then
+			local first = design.parts[1]
+			local entry = first and Catalog.ColorById[first.color]
+			color = if entry then entry.color else UI.Colors.Good
+			local length = utf8.len(design.name) or 0
+			text = if length > 2 then string.sub(design.name, 1, (utf8.offset(design.name, 3) or 1) - 1) else design.name
+		end
+		local button = UI.Button(wallRow, text, color, { LayoutOrder = col })
+		local luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114
+		button.TextColor3 = if luminance > 0.62 then UI.Colors.Text else Color3.new(1, 1, 1)
+		if key == selectedCell then
+			UI.Stroke(button, Color3.fromRGB(40, 40, 40), 3)
+		end
+		button.Activated:Connect(function()
+			selectedCell = key
+			render()
+		end)
+	end
+
 	for _, child in grid:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
@@ -258,9 +291,21 @@ function HomePanel.Start()
 	end)
 
 	-- 左：マス目（正方形を保つ）
-	grid = UI.Frame(panel, {
-		Size = UDim2.new(0.5, -18, 1, -90),
+	-- 奥の壁の「壁かけ」の棚（マス目の上に1列）
+	wallRow = UI.Frame(panel, {
+		Size = UDim2.new(0.5, -18, 0, 36),
 		Position = UDim2.new(0, 12, 0, 50),
+		BackgroundTransparency = 1,
+	})
+	local wallLayout = Instance.new("UIGridLayout")
+	wallLayout.CellSize = UDim2.new(1 / WALL_SLOTS, -4, 1, 0)
+	wallLayout.CellPadding = UDim2.new(0, 4, 0, 0)
+	wallLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	wallLayout.Parent = wallRow
+
+	grid = UI.Frame(panel, {
+		Size = UDim2.new(0.5, -18, 1, -132),
+		Position = UDim2.new(0, 12, 0, 92),
 		BackgroundColor3 = UI.Colors.PanelDark,
 	})
 	UI.Corner(grid, 12)

@@ -97,6 +97,14 @@ function PlotService.HomeCellOffset(x: number, z: number): CFrame
 	return PlotService.HomeOffset * CFrame.new((x - half) * PlotService.HomeCellSize, 0, (z - half) * PlotService.HomeCellSize + 2)
 end
 
+-- 壁かけの棚（奥の壁に6つ）。i は 1〜HomeWallSlots
+PlotService.HomeWallSlots = 6
+function PlotService.HomeWallOffset(i: number): CFrame
+	local x = (i - (PlotService.HomeWallSlots + 1) / 2) * 6
+	-- 部屋の中を向くよう180°回す（奥の壁から手前を見る）
+	return PlotService.HomeOffset * CFrame.new(x, 6, PlotService.HomeRoomHalf - 1.6) * CFrame.Angles(0, math.pi, 0)
+end
+
 local function buildHome(model: Model, origin: CFrame, accent: Color3)
 	local home = Instance.new("Model")
 	home.Name = "Home"
@@ -163,6 +171,17 @@ local function buildHome(model: Model, origin: CFrame, accent: Color3)
 	decorPrompt.MaxActivationDistance = 9
 	decorPrompt.RequiresLineOfSight = false
 	decorPrompt.Parent = board
+
+	-- 壁かけの棚板
+	for i = 1, PlotService.HomeWallSlots do
+		Build.Part(home, {
+			Name = "WallShelf",
+			Size = Vector3.new(4.6, 0.3, 2.6),
+			CFrame = origin * PlotService.HomeWallOffset(i) * CFrame.new(0, -0.15, 0),
+			Color = Color3.fromRGB(150, 105, 70),
+			Material = Enum.Material.Wood,
+		})
+	end
 
 	-- マス目の目印（うっすら）
 	local minCell, maxCell = PlotService.HomeGridRange(true)
