@@ -7,6 +7,7 @@ local SocialService = game:GetService("SocialService")
 
 local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
 local UI = require(script.Parent:WaitForChild("UI"))
+local GiftPanel = require(script.Parent:WaitForChild("GiftPanel"))
 
 local TravelPanel = {}
 
@@ -50,6 +51,10 @@ local function render()
 	plaza.Activated:Connect(function()
 		go("plaza")
 	end)
+	local giftButton = UI.Button(list, "プレゼントを贈る", Color3.fromRGB(230, 110, 140), { Size = UDim2.new(1, -12, 0, 40), LayoutOrder = 3 })
+	giftButton.Activated:Connect(function()
+		GiftPanel.Open()
+	end)
 	-- フレンドを招待する（Roblox 標準の招待画面）
 	local invite = UI.Button(list, "フレンドを招待する", Color3.fromRGB(240, 150, 60), { Size = UDim2.new(1, -12, 0, 40), LayoutOrder = 2 })
 	invite.Activated:Connect(function()
@@ -91,7 +96,7 @@ local function render()
 		return a.stars > b.stars
 	end)
 	if #entries == 0 then
-		UI.Label(list, "ほかのお店はまだありません", { Size = UDim2.new(1, -12, 0, 34), LayoutOrder = 3 })
+		UI.Label(list, "ほかのお店はまだありません", { Size = UDim2.new(1, -12, 0, 34), LayoutOrder = 4 })
 	end
 	for i, entry in entries do
 		local stars = string.rep("★", entry.stars) .. string.rep("☆", 5 - entry.stars)

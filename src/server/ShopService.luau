@@ -576,6 +576,69 @@ local function buyFlyer(player: Player): (boolean, string)
 	return true, ("チラシを配りました！%d分間お客さんが増えます"):format(ShopService.FlyerSeconds // 60)
 end
 
+-- プレゼント：自分の在庫のアイテムを1つ、同じサーバーの人に贈る（受け取った人は自宅に飾れる）
+local lastGift: { [Player]: number } = {}
+local giftEvent = Net.Event("GiftReceived")
+local function gift(sender: Player, targetUserId: any, designId: any): (boolean, string)
+	local now = os.clock()
+	if lastGift[sender] and now - lastGift[sender] < 2 then
+		return false, "少し待ってからどうぞ"
+	end
+	if type(targetUserId) ~= "number" or type(designId) ~= "string" then
+		return false, "贈り先が正しくありません"
+	end
+	local target = Players:GetPlayerByUserId(targetUserId)
+	if not target or target == sender then
+		return false, "贈り先が見つかりません"
+	end
+	local senderProfile = DataService.Get(sender)
+	local targetProfile = DataService.Get(target)
+	if not senderProfile or not targetProfile then
+		return false, "データを読み込み中です"
+	end
+	local design = senderProfile.designs[designId]
+	if not design or design.boughtFrom then
+		return false, "自分で作ったアイテムだけ贈れます"
+	end
+	local stock = senderProfile.stock[designId] or 0
+	if stock <= 0 then
+		return false, "在庫がありません。工房で作りましょう"
+	end
+	local sourceKey = sender.UserId .. ":" .. designId
+	local targetId: string? = nil
+	local boughtCount = 0
+	for id, d in targetProfile.designs do
+		if d.boughtFrom then
+			boughtCount += 1
+			if d.sourceKey == sourceKey then
+				targetId = id
+			end
+		end
+	end
+	if not targetId and boughtCount >= ShopService.MaxBought then
+		return false, "相手のアイテム置き場がいっぱいです"
+	end
+	lastGift[sender] = now
+	senderProfile.stock[designId] = stock - 1
+	if not targetId then
+		targetId = "d" .. targetProfile.nextDesignId
+		targetProfile.nextDesignId += 1
+		targetProfile.designs[targetId] = {
+			name = design.name,
+			parts = HttpService:JSONDecode(HttpService:JSONEncode(design.parts)),
+			boughtFrom = sender.DisplayName,
+			sourceKey = sourceKey,
+		}
+	end
+	local id = targetId :: string
+	targetProfile.stock[id] = (targetProfile.stock[id] or 0) + 1
+	DataService.Changed(sender)
+	DataService.Changed(target)
+	ShopService.Render(sender)
+	giftEvent:FireClient(target, sender.DisplayName, design.name)
+	return true, ("%s さんに「%s」を贈りました！"):format(target.DisplayName, design.name)
+end
+
 local function wrap(name: string, fn: (...any) -> (boolean, string))
 	Net.Function(name).OnServerInvoke = function(player, ...)
 		local ok, a, b = pcall(fn, player, ...)
@@ -595,6 +658,7 @@ function ShopService.Start()
 	wrap("SetInterior", setInterior)
 	wrap("SetSlogan", setSlogan)
 	wrap("BuyFlyer", buyFlyer)
+	wrap("SendGift", gift)
 
 	-- 棚にプロンプトをつける（店主だけが使える。判定はクライアント表示とサーバー処理の両方）
 	for _, plot in PlotService.All() do
@@ -630,6 +694,7 @@ function ShopService.Start()
 		lastRequest[player] = nil
 		lastSlogan[player] = nil
 		flyerUntil[player] = nil
+		lastGift[player] = nil
 	end)
 end
 
