@@ -188,6 +188,58 @@ local function setNewYear(active: boolean)
 	end
 end
 
+-- 自宅の窓の外に降る雪（窓のすぐ内側から下へ短く降らせて、窓の高さの中だけに見せる）と、冬の夕方の空の色
+local WINTER_WINDOW = Color3.fromRGB(150, 180, 225)
+local function setHomeWindows(parent: Instance?, active: boolean)
+	for _, plot in PlotService.All() do
+		local home = plot.model:FindFirstChild("Home")
+		if not home then
+			continue
+		end
+		local center = (plot.origin * PlotService.HomeOffset).Position
+		for _, window in home:GetChildren() do
+			if window.Name ~= "Window" or not window:IsA("BasePart") then
+				continue
+			end
+			if window:GetAttribute("DefaultColor") == nil then
+				window:SetAttribute("DefaultColor", window.Color)
+			end
+			local default = window:GetAttribute("DefaultColor")
+			window.Color = if active then WINTER_WINDOW elseif typeof(default) == "Color3" then default else window.Color
+			if active and parent then
+				local right = window.CFrame.RightVector
+				local inward = if (center - window.Position):Dot(right) > 0 then right else -right
+				local snow = Build.Part(parent, {
+					Name = "WindowSnow",
+					Size = Vector3.new(0.05, 0.2, window.Size.Z - 0.6),
+					CFrame = window.CFrame * CFrame.new(0, window.Size.Y / 2 - 0.2, 0) + inward * 0.3,
+					Transparency = 1,
+					CanCollide = false,
+				})
+				snow.CanQuery = false
+				local emitter = Instance.new("ParticleEmitter")
+				emitter.Color = ColorSequence.new(Color3.new(1, 1, 1))
+				emitter.LightEmission = 0.3
+				emitter.Size = NumberSequence.new(0.14)
+				emitter.Speed = NumberRange.new(3.5, 4.5)
+				emitter.Lifetime = NumberRange.new(1, 1.1) -- 約4.5スタッド＝窓の高さ（5）の中で消える
+				emitter.Rate = 25
+				emitter.EmissionDirection = Enum.NormalId.Bottom
+				emitter.Parent = snow
+				-- 窓の下のふちに積もった雪
+				Build.Part(parent, {
+					Name = "WindowSill",
+					Size = Vector3.new(0.3, 0.35, window.Size.Z),
+					CFrame = window.CFrame * CFrame.new(0, -window.Size.Y / 2 + 0.18, 0) + inward * 0.2,
+					Color = Color3.fromRGB(248, 251, 255),
+					Material = Enum.Material.Snow,
+					CanCollide = false,
+				})
+			end
+		end
+	end
+end
+
 local decor: Folder? = nil
 
 local function setDecor(active: boolean)
@@ -198,12 +250,14 @@ local function setDecor(active: boolean)
 		buildTree(folder, spot)
 		buildExtras(folder, spot)
 		buildRoofSnow(folder)
+		setHomeWindows(folder, true)
 		buildSnow(folder)
 		folder.Parent = workspace
 		decor = folder
 	elseif not active and decor then
 		decor:Destroy()
 		decor = nil
+		setHomeWindows(nil, false)
 	end
 end
 
