@@ -1,5 +1,5 @@
 --!strict
--- 季節イベントの飾り（冬：広場に雪とツリー）。期間はサーバー起動時に判定する
+-- 季節イベントの飾り（冬：広場に雪とツリー）。期間は1分ごとに判定する
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -90,15 +90,57 @@ local function buildSnow(parent: Instance)
 	snow.Parent = cloud
 end
 
-function SeasonService.Start()
-	if not Season.IsActive("winter") then
-		return
+local decor: Folder? = nil
+
+local function setDecor(active: boolean)
+	if active and not decor then
+		local folder = Instance.new("Folder")
+		folder.Name = "WinterDecor"
+		buildTree(folder, WorldService.SpotPosition(WorldService.SeasonSpot, 22) + Vector3.new(0, 0.4, 0)) -- ベンチを置いていない外周の場所
+		buildSnow(folder)
+		folder.Parent = workspace
+		decor = folder
+	elseif not active and decor then
+		decor:Destroy()
+		decor = nil
 	end
-	local folder = Instance.new("Folder")
-	folder.Name = "WinterDecor"
-	folder.Parent = workspace
-	buildTree(folder, WorldService.SpotPosition(WorldService.SeasonSpot, 22) + Vector3.new(0, 0.4, 0)) -- ベンチを置いていない外周の場所
-	buildSnow(folder)
+end
+
+local WINTER_NOTE = "冬のイベント開催中（1/7まで）！ 部品の限定色と、サンタさんのお客さんが来るよ"
+
+function SeasonService.Start()
+	local Players = game:GetService("Players")
+	local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
+	local noticeEvent = Net.Event("Notice")
+	local wasActive = Season.IsActive("winter")
+	setDecor(wasActive)
+	-- 入ってきた人に、開催中なら一度だけ知らせる（ほかのお知らせと重ならないよう少し待つ）
+	Players.PlayerAdded:Connect(function(player)
+		task.delay(20, function()
+			if player.Parent and Season.IsActive("winter") then
+				noticeEvent:FireClient(player, WINTER_NOTE)
+			end
+		end)
+	end)
+	-- 長く動いているサーバーでも、日付が変わったら飾りを出し入れする（以前は起動時だけ判定していた）
+	task.spawn(function()
+		while true do
+			task.wait(60)
+			local ok, err = pcall(function()
+				local active = Season.IsActive("winter")
+				if active ~= wasActive then
+					wasActive = active
+					setDecor(active)
+					if active then
+						noticeEvent:FireAllClients("冬のイベントが始まりました！ 広場に雪とツリー、部品に限定色が登場")
+					end
+				end
+			end)
+			if not ok then
+				warn("[SeasonService] エラー:", err)
+			end
+		end
+	end)
 end
 
 return SeasonService
