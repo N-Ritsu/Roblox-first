@@ -109,6 +109,7 @@ render = function()
 	local sections = {
 		{ kind = "wall", title = "壁の色", list = ShopUpgrades.Walls, current = profile.interior.wall },
 		{ kind = "floor", title = "床", list = ShopUpgrades.Floors, current = profile.interior.floor },
+		{ kind = "awning", title = "ひさしの色", list = ShopUpgrades.Awnings, current = profile.interior.awning or "Default" },
 	}
 	for i, section in sections do
 		heading(section.title, 10 * i)
@@ -117,8 +118,9 @@ render = function()
 			local owned = entry.price == 0 or profile.ownedInterior[section.kind .. ":" .. entry.id] == true
 			local isCurrent = section.current == entry.id
 			local text = if isCurrent then entry.name .. " ✓" elseif owned then entry.name else ("%s %d"):format(entry.name, entry.price)
-			local button = UI.Button(frame, text, entry.color, { LayoutOrder = j })
-			local luminance = entry.color.R * 0.299 + entry.color.G * 0.587 + entry.color.B * 0.114
+			local color = entry.color or Color3.fromRGB(205, 150, 110) -- ひさしの「はじめの色」は色なし
+			local button = UI.Button(frame, text, color, { LayoutOrder = j })
+			local luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114
 			button.TextColor3 = if luminance > 0.62 then UI.Colors.Text else Color3.new(1, 1, 1)
 			if isCurrent then
 				UI.Stroke(button, UI.Colors.Good, 3)

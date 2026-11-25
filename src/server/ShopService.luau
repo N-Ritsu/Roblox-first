@@ -54,7 +54,7 @@ local function setPromptText(plot: PlotService.Plot, slot: number, text: string?
 end
 
 -- 使える陳列台の数と内装を区画に反映する
-local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: string, floorId: string)
+local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: string, floorId: string, awningId: string?)
 	for slot = 1, ShopService.SlotCount do
 		local tablePart = plot.model:FindFirstChild("ShelfTable" .. slot) :: BasePart?
 		if tablePart then
@@ -81,6 +81,15 @@ local function applyLayout(plot: PlotService.Plot, shelfSlots: number, wallId: s
 	if floorPart and floorPart:IsA("BasePart") then
 		floorPart.Color = floor.color
 		floorPart.Material = floor.material
+	end
+	local awning = ShopUpgrades.AwningById[awningId or "Default"]
+	local awningColor = (awning and awning.color) or plot.model:GetAttribute("DefaultAwning")
+	if typeof(awningColor) == "Color3" then
+		for _, part in plot.model:GetChildren() do
+			if part.Name == "AwningColor" and part:IsA("BasePart") then
+				part.Color = awningColor
+			end
+		end
 	end
 end
 
@@ -222,7 +231,7 @@ function ShopService.Render(player: Player)
 		end
 	end
 	plot.model:SetAttribute("OnSale", onSale)
-	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor)
+	applyLayout(plot, profile.shelfSlots, profile.interior.wall, profile.interior.floor, profile.interior.awning)
 	local best = bestSeller(profile)
 	updateSign(player)
 	for slot = 1, math.min(ShopService.SlotCount, profile.shelfSlots) do
@@ -493,7 +502,7 @@ local function setInterior(player: Player, kind: any, id: any): (boolean, string
 	if not profile then
 		return false, "データを読み込み中です"
 	end
-	local list = if kind == "wall" then ShopUpgrades.WallById elseif kind == "floor" then ShopUpgrades.FloorById else nil
+	local list = if kind == "wall" then ShopUpgrades.WallById elseif kind == "floor" then ShopUpgrades.FloorById elseif kind == "awning" then ShopUpgrades.AwningById else nil
 	local entry = list and type(id) == "string" and (list :: any)[id]
 	if not entry then
 		return false, "見つかりません"

@@ -23,7 +23,7 @@ export type Profile = {
 	shelves: { [string]: any }, -- 棚番号（文字列）→ { designId, price }
 	home: { [string]: any }, -- 自宅のマス "x_z" → { designId, rot }
 	shelfSlots: number, -- 使える陳列台の数
-	interior: { wall: string, floor: string },
+	interior: { wall: string, floor: string, awning: string },
 	ownedInterior: { [string]: boolean }, -- 買った内装（"wall:Mint" など）
 	goalsClaimed: { [string]: boolean }, -- 報酬を受け取った目標
 	reputation: number, -- 店の評判 0〜100
@@ -76,7 +76,7 @@ local function defaultProfile(): Profile
 		shelves = {},
 		home = {},
 		shelfSlots = 4,
-		interior = { wall = "Cream", floor = "Wood" },
+		interior = { wall = "Cream", floor = "Wood", awning = "Default" },
 		ownedInterior = {},
 		goalsClaimed = {},
 		reputation = 10,

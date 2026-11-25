@@ -210,10 +210,11 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 
 	-- 縞模様のひさし
 	local awningColor = AWNING_COLORS[(index - 1) % #AWNING_COLORS + 1]
+	model:SetAttribute("DefaultAwning", awningColor)
 	for i = 0, 7 do
 		local x = -14 + 3.5 * i + 1.75
 		Build.Part(model, {
-			Name = "Awning",
+			Name = if i % 2 == 0 then "AwningColor" else "AwningWhite", -- 色つきの縞は内装で色を変えられる
 			Size = Vector3.new(3.5, 0.3, 5),
 			CFrame = at(x, 11.5, -6.6) * CFrame.Angles(math.rad(-20), 0, 0),
 			Color = if i % 2 == 0 then awningColor else Color3.new(1, 1, 1),

@@ -1,6 +1,6 @@
 -- ゲーム全体の設定値
 local Config = {
-	Version = "0.32.1",
+	Version = "0.33.0",
 
 	-- セーブデータ
 	DataStoreName = "PlayerData_v1",
