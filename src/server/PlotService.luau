@@ -20,6 +20,7 @@ export type Plot = {
 	origin: CFrame,
 	owner: Player?,
 	signLabel: TextLabel,
+	sloganLabel: TextLabel,
 }
 
 local plots: { Plot } = {}
@@ -208,6 +209,13 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 	local signBoard = Build.Part(model, { Name = "Sign", Size = Vector3.new(16, 3, 0.6), CFrame = at(0, 15.6, -4.6), Color = TRIM, Material = Enum.Material.Wood })
 	local signLabel = Build.Sign(signBoard, "空き店舗", Enum.NormalId.Front)
 
+	-- 店の前の立て看板（キャッチコピー）
+	local standBoard = Build.Part(model, { Name = "SloganBoard", Size = Vector3.new(5, 2.6, 0.3), CFrame = at(-9, 2.6, -7.5), Color = Color3.fromRGB(45, 55, 50), Material = Enum.Material.Slate })
+	for _, x in { -2, 2 } do
+		Build.Part(model, { Name = "SloganLeg", Size = Vector3.new(0.3, 2.6, 0.3), CFrame = at(-9 + x, 1.3, -7.5), Color = TRIM, Material = Enum.Material.Wood })
+	end
+	local sloganLabel = Build.Sign(standBoard, "", Enum.NormalId.Front, Color3.fromRGB(250, 250, 240))
+
 	-- 陳列台
 	for i, offset in PlotService.ShelfOffsets do
 		local shelfTable = Build.Part(model, { Name = "ShelfTable" .. i, Size = Vector3.new(4, 3, 4), CFrame = origin * offset * CFrame.new(0, -1.5, 0), Color = TRIM, Material = Enum.Material.Wood })
@@ -266,6 +274,7 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 		origin = origin,
 		owner = nil,
 		signLabel = signLabel,
+		sloganLabel = sloganLabel,
 	}
 end
 
@@ -317,6 +326,7 @@ local function release(player: Player)
 	plotByPlayer[player] = nil
 	plot.model:SetAttribute("OwnerUserId", nil)
 	plot.signLabel.Text = "空き店舗"
+	plot.sloganLabel.Text = ""
 end
 
 function PlotService.TeleportHome(player: Player)

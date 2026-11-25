@@ -2,6 +2,7 @@
 -- 製作（デザインから在庫を作る）と、店の棚への陳列・表示
 
 local HttpService = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -127,6 +128,8 @@ local function updateSign(player: Player)
 	if plot then
 		plot.signLabel.Text = ("%s のお店 %s"):format(player.DisplayName, starText(ShopService.Stars(player)))
 		plot.model:SetAttribute("Stars", ShopService.Stars(player)) -- お店めぐりの一覧で使う
+		local profile = DataService.Get(player)
+		plot.sloganLabel.Text = if profile then profile.slogan else ""
 	end
 end
 
@@ -496,6 +499,45 @@ local function setInterior(player: Player, kind: any, id: any): (boolean, string
 	return true, ("「%s」にしました"):format(entry.name)
 end
 
+-- キャッチコピー（他の人にも見えるので Roblox のフィルターを通す）
+ShopService.SloganMaxLength = 20
+local lastSlogan: { [Player]: number } = {}
+local function setSlogan(player: Player, text: any): (boolean, string)
+	local now = os.clock()
+	if lastSlogan[player] and now - lastSlogan[player] < 3 then
+		return false, "少し待ってからどうぞ"
+	end
+	local profile = DataService.Get(player)
+	if not profile or type(text) ~= "string" then
+		return false, "設定できませんでした"
+	end
+	text = string.gsub(text, "[%c]", "")
+	text = string.gsub(text, "^%s+", "")
+	text = string.gsub(text, "%s+$", "")
+	local length = utf8.len(text)
+	if not length then
+		return false, "使えない文字があります"
+	end
+	if length > ShopService.SloganMaxLength then
+		return false, ("%d文字までです"):format(ShopService.SloganMaxLength)
+	end
+	lastSlogan[player] = now
+	local filtered = ""
+	if length > 0 then
+		local ok, result = pcall(function()
+			return TextService:FilterStringAsync(text, player.UserId):GetNonChatStringForBroadcastAsync()
+		end)
+		if not ok or type(result) ~= "string" then
+			return false, "文字を確認できませんでした。もう一度どうぞ"
+		end
+		filtered = result
+	end
+	profile.slogan = filtered
+	DataService.Changed(player)
+	updateSign(player)
+	return true, if filtered == "" then "キャッチコピーを消しました" else "キャッチコピーを出しました！"
+end
+
 local function wrap(name: string, fn: (...any) -> (boolean, string))
 	Net.Function(name).OnServerInvoke = function(player, ...)
 		local ok, a, b = pcall(fn, player, ...)
@@ -513,6 +555,7 @@ function ShopService.Start()
 	wrap("BuyFromShelf", buy)
 	wrap("BuyShelfSlot", buyShelfSlot)
 	wrap("SetInterior", setInterior)
+	wrap("SetSlogan", setSlogan)
 
 	-- 棚にプロンプトをつける（店主だけが使える。判定はクライアント表示とサーバー処理の両方）
 	for _, plot in PlotService.All() do
@@ -546,6 +589,7 @@ function ShopService.Start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil
+		lastSlogan[player] = nil
 	end)
 end
 

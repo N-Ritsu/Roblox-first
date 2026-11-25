@@ -16,6 +16,8 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local buySlotRemote = Net.Function("BuyShelfSlot")
 local interiorRemote = Net.Function("SetInterior")
+local sloganRemote = Net.Function("SetSlogan")
+local openSlogan: () -> () = function() end
 
 local panel: Frame
 local content: ScrollingFrame
@@ -122,6 +124,7 @@ function ShopPanel.Open()
 	end
 	UI.CloseOtherPanels(ShopPanel.Close)
 	panel.Visible = true
+	openSlogan()
 	render()
 end
 
@@ -158,7 +161,7 @@ function ShopPanel.Start()
 	close.Activated:Connect(ShopPanel.Close)
 
 	content = Instance.new("ScrollingFrame")
-	content.Size = UDim2.new(1, -24, 1, -62)
+	content.Size = UDim2.new(1, -24, 1, -112)
 	content.Position = UDim2.new(0, 12, 0, 50)
 	content.BackgroundColor3 = UI.Colors.PanelDark
 	content.BorderSizePixel = 0
@@ -176,6 +179,29 @@ function ShopPanel.Start()
 	padding.PaddingBottom = UDim.new(0, 8)
 	padding.Parent = content
 	content.Parent = panel
+
+	-- キャッチコピー（一覧の作り直しで入力中の文字が消えないよう、一覧の外に置く）
+	local sloganBox = Instance.new("TextBox")
+	sloganBox.Size = UDim2.new(1, -130, 0, 40)
+	sloganBox.Position = UDim2.new(0, 12, 1, -52)
+	sloganBox.BackgroundColor3 = Color3.new(1, 1, 1)
+	sloganBox.Font = UI.Font
+	sloganBox.TextScaled = true
+	sloganBox.TextColor3 = UI.Colors.Text
+	sloganBox.PlaceholderText = "お店のキャッチコピー（20文字まで）"
+	sloganBox.ClearTextOnFocus = false
+	sloganBox.Text = ""
+	UI.Corner(sloganBox, 10)
+	UI.Stroke(sloganBox)
+	sloganBox.Parent = panel
+	local sloganButton = UI.Button(panel, "看板に出す", UI.Colors.Good, { Size = UDim2.new(0, 106, 0, 40), Position = UDim2.new(1, -118, 1, -52) })
+	sloganButton.Activated:Connect(function()
+		invoke(sloganRemote, sloganBox.Text)
+	end)
+	openSlogan = function()
+		local profile = State.profile
+		sloganBox.Text = if profile then profile.slogan or "" else ""
+	end
 
 	-- 画面左の「お店」ボタン（部品ボタンの下）
 	local openButton = UI.SideButton(playerGui, "OpenShopPanel", "お店", Color3.fromRGB(150, 110, 210), Color3.fromRGB(100, 70, 150), 3)
