@@ -71,7 +71,11 @@ local function startGlobal(board: BasePart)
 
 	-- 記録を書き込む（変わっていなければ書かない）。退出時にも呼ぶので、セーブデータが先に消えていたら leaderstats から読む
 	local lastWritten: { [number]: number } = {}
+	local writing: { [number]: boolean } = {}
 	local function writeScore(player: Player)
+		if writing[player.UserId] then
+			return -- 同じ人の書き込みが進行中なら重ねない
+		end
 		local profile = DataService.Get(player)
 		local sold = profile and profile.stats.sold
 		if not sold then
@@ -86,9 +90,11 @@ local function startGlobal(board: BasePart)
 		if lastWritten[player.UserId] == sold then
 			return
 		end
+		writing[player.UserId] = true
 		local okWrite = pcall(function()
 			(store :: OrderedDataStore):SetAsync(tostring(player.UserId), sold)
 		end)
+		writing[player.UserId] = nil
 		if okWrite then
 			lastWritten[player.UserId] = sold
 		end
@@ -98,8 +104,17 @@ local function startGlobal(board: BasePart)
 		lastWritten[player.UserId] = nil
 	end)
 	game:BindToClose(function()
+		local pending = 0
 		for _, player in Players:GetPlayers() do
-			task.spawn(writeScore, player)
+			pending += 1
+			task.spawn(function()
+				writeScore(player)
+				pending -= 1
+			end)
+		end
+		local started = os.clock()
+		while pending > 0 and os.clock() - started < 20 do
+			task.wait(0.1)
 		end
 	end)
 
