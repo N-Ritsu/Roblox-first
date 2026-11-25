@@ -37,6 +37,7 @@ export type Profile = {
 	homeExpanded: boolean, -- 自宅を 8×8 に広げたか
 	partyDay: number, -- おうちパーティーの報酬を数えている日（日本時間の通し日数）
 	partyCount: number, -- その日に受け取ったパーティー報酬の回数
+	ordersDone: number, -- 達成したお客さんの注文の数
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -92,6 +93,7 @@ local function defaultProfile(): Profile
 		homeExpanded = false,
 		partyDay = 0,
 		partyCount = 0,
+		ordersDone = 0,
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,

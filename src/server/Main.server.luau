@@ -6,6 +6,7 @@ local services = {
 	"PlotService",
 	"DesignService",
 	"ShopService",
+	"OrderService",
 	"CustomerService",
 	"UnlockService",
 	"DailyService",

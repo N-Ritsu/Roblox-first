@@ -66,6 +66,9 @@ Goals.List = {
 	{ id = "likes10", text = "自宅に「いいね」を10個もらう", target = 10, reward = 200, progress = function(p)
 		return p.homeLikes
 	end },
+	{ id = "orders5", text = "お客さんの注文を5回かなえる", target = 5, reward = 150, progress = function(p)
+		return p.ordersDone or 0
+	end },
 	{ id = "sold200", text = "商品を200個売る", target = 200, reward = 400, progress = sold },
 	{ id = "earned5000", text = "売上を合計5000コインにする", target = 5000, reward = 500, progress = earned },
 } :: { Goal }

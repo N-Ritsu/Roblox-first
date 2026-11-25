@@ -13,6 +13,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local PlotService = require(script.Parent:WaitForChild("PlotService"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
+local OrderService = require(script.Parent:WaitForChild("OrderService"))
 local Build = require(script.Parent:WaitForChild("Build"))
 
 local CustomerService = {}
@@ -346,7 +347,8 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 	end
 
 	-- 店の前まで来る。好みがあれば吹き出しで教えてくれる
-	local preference = if kind then nil else pickPreference()
+	-- 注文中なら、注文したお客さん本人が来ることがある
+	local preference = if kind then nil else (OrderService.PreferenceFor(owner) or pickPreference())
 	if rich then
 		say(customer, "いい品はあるかね？")
 		noticeEvent:FireClient(owner, "お金持ちのお客さんが来た！")
@@ -430,6 +432,7 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 				DataService.AddCoins(owner, shelf.price)
 				ShopService.Render(owner)
 				saleEvent:FireClient(owner, design.name, shelf.price)
+				OrderService.OnSale(owner, design)
 				coinBurst(world(PlotService.ShelfOffsets[slot].Position) + Vector3.new(0, 2, 0))
 			end
 			say(customer, line)

@@ -76,6 +76,42 @@ function Hud.Start()
 		end
 	end)
 
+	-- お客さんの注文（お題の上。注文がないときは隠す）
+	local orderFrame = UI.Frame(gui, {
+		Name = "Order",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Size = UDim2.new(0, 300, 0, 44),
+		Position = UDim2.new(0.5, 0, 1, -62),
+		BackgroundColor3 = Color3.fromRGB(215, 240, 255),
+		Visible = false,
+	})
+	UI.Corner(orderFrame, 12)
+	UI.Stroke(orderFrame, Color3.fromRGB(90, 170, 240), 2)
+	local orderTitle = UI.Label(orderFrame, "", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.new(0, 6, 0, 3) })
+	local orderText = UI.Label(orderFrame, "", { Size = UDim2.new(1, -12, 0, 22), Position = UDim2.new(0, 6, 0, 19) })
+	local currentOrder: any = nil
+	local function updateOrder()
+		if not currentOrder then
+			orderFrame.Visible = false
+			return
+		end
+		local left = math.max(0, (currentOrder.expires :: number) - workspace:GetServerTimeNow())
+		orderFrame.Visible = left > 0
+		orderTitle.Text = ("お客さんの注文（あと%d分%02d秒）"):format(math.floor(left / 60), math.floor(left % 60))
+		orderText.Text = ("%sを売るとボーナス +%d"):format(currentOrder.label, currentOrder.bonus)
+	end
+	Net.Event("Order").OnClientEvent:Connect(function(order: any)
+		currentOrder = order
+		updateOrder()
+	end)
+	Net.Event("RequestOrder"):FireServer()
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			updateOrder()
+		end
+	end)
+
 	-- サーバーからのお知らせ
 	Net.Event("Notice").OnClientEvent:Connect(function(text: string)
 		UI.Toast(playerGui, text, UI.Colors.Accent)
