@@ -6,6 +6,7 @@ local modules = {
 	"Workshop",
 	"ShelfPanel",
 	"PartShop",
+	"Guide",
 }
 
 for _, name in modules do

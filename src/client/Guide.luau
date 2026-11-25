@@ -1,0 +1,133 @@
+--!strict
+-- 初回の操作ガイド（画面上部の「次にやること」）と、デイリーボーナスの表示
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
+local State = require(script.Parent:WaitForChild("State"))
+local UI = require(script.Parent:WaitForChild("UI"))
+
+local Guide = {}
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 今のデータから、次にやることを決める
+local function currentStep(profile: any): (number, string)
+	local hasDesign = next(profile.designs) ~= nil
+	if not hasDesign then
+		return 1, "① 左の「工房」ボタンで、アイテムをデザインして保存しよう"
+	end
+	local hasStock = false
+	for _, count in profile.stock do
+		if count > 0 then
+			hasStock = true
+		end
+	end
+	local hasShelf = next(profile.shelves) ~= nil
+	if not hasStock and profile.stats.sold == 0 then
+		return 2, "② 工房の「1個作る」で商品を作ろう"
+	end
+	if not hasShelf then
+		return 3, "③ お店の陳列台に近づいて、商品を並べよう"
+	end
+	if profile.stats.sold == 0 then
+		return 4, "④ お客さんが来るのを待とう（値段が高すぎると売れないよ）"
+	end
+	return 5, ""
+end
+
+local function showDaily(gui: ScreenGui, streak: number, reward: number, tomorrow: number)
+	local card = UI.Frame(gui, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.45),
+		Size = UDim2.new(0, 300, 0, 190),
+	})
+	UI.Corner(card, 16)
+	UI.Stroke(card, UI.Colors.Coin, 4)
+	UI.Label(card, "ログインボーナス！", { Size = UDim2.new(1, -20, 0, 36), Position = UDim2.new(0, 10, 0, 10) })
+	UI.Label(card, ("+%d コイン"):format(reward), {
+		Size = UDim2.new(1, -20, 0, 46),
+		Position = UDim2.new(0, 10, 0, 48),
+		TextColor3 = Color3.fromRGB(210, 140, 20),
+	})
+	UI.Label(card, ("%d日連続ログイン・明日は +%d"):format(streak, tomorrow), {
+		Size = UDim2.new(1, -20, 0, 24),
+		Position = UDim2.new(0, 10, 0, 98),
+	})
+	local ok = UI.Button(card, "やったね！", UI.Colors.Good, { Size = UDim2.new(0, 160, 0, 40), Position = UDim2.new(0.5, -80, 1, -52) })
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.6
+	scale.Parent = card
+	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	ok.Activated:Connect(function()
+		card:Destroy()
+	end)
+	task.delay(10, function()
+		if card.Parent then
+			card:Destroy()
+		end
+	end)
+end
+
+function Guide.Start()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Guide"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 20
+	gui.Parent = playerGui
+
+	local bar = UI.Frame(gui, {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 10),
+		Size = UDim2.new(0.6, 0, 0, 40),
+		BackgroundColor3 = Color3.fromRGB(255, 240, 190),
+		Visible = false,
+	})
+	UI.Corner(bar, 12)
+	UI.Stroke(bar, UI.Colors.Coin, 3)
+	local constraint = Instance.new("UISizeConstraint")
+	constraint.MaxSize = Vector2.new(560, 40)
+	constraint.MinSize = Vector2.new(260, 40)
+	constraint.Parent = bar
+	local text = UI.Label(bar, "", { Size = UDim2.new(1, -16, 1, -8), Position = UDim2.new(0, 8, 0, 4) })
+
+	local lastStep = 0
+	local finished = false
+	State.Observe(function(profile)
+		if profile.tutorialDone or finished then
+			bar.Visible = false
+			return
+		end
+		local step, message = currentStep(profile)
+		if step >= 5 then
+			finished = true
+			bar.Visible = false
+			Net.Event("TutorialDone"):FireServer()
+			UI.Toast(playerGui, "初めての売上おめでとう！「部品」で新しい部品を解放しよう", UI.Colors.Good)
+			return
+		end
+		bar.Visible = true
+		text.Text = message
+		if step ~= lastStep then
+			lastStep = step
+			bar.Size = UDim2.new(0.6, 0, 0, 40)
+			local pulse = Instance.new("UIScale")
+			pulse.Scale = 1.12
+			pulse.Parent = bar
+			local tween = TweenService:Create(pulse, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Scale = 1 })
+			tween.Completed:Connect(function()
+				pulse:Destroy()
+			end)
+			tween:Play()
+		end
+	end)
+
+	Net.Event("DailyBonus").OnClientEvent:Connect(function(streak: number, reward: number, tomorrow: number)
+		showDaily(gui, streak, reward, tomorrow)
+	end)
+end
+
+return Guide
