@@ -49,7 +49,7 @@ local function startGlobal(board: BasePart)
 	line(0, "全サーバー 売った数ランキング", Color3.fromRGB(255, 220, 90), 40)
 	local rows = {}
 	for i = 1, RankingService.GlobalShown do
-		rows[i] = line(i, "", Color3.new(1, 1, 1), 24)
+		rows[i] = line(i, "", Color3.new(1, 1, 1), 23)
 	end
 	rows[1].Text = "集計中…"
 	gui.Parent = board
@@ -62,21 +62,52 @@ local function startGlobal(board: BasePart)
 		local okName, name = pcall(function()
 			return Players:GetNameFromUserIdAsync(userId)
 		end)
-		local result = if okName and type(name) == "string" then name else "？"
-		names[userId] = result
-		return result
+		if okName and type(name) == "string" then
+			names[userId] = name -- 失敗したときは覚えず、次回また調べる
+			return name
+		end
+		return "？"
 	end
+
+	-- 記録を書き込む（変わっていなければ書かない）。退出時にも呼ぶので、セーブデータが先に消えていたら leaderstats から読む
+	local lastWritten: { [number]: number } = {}
+	local function writeScore(player: Player)
+		local profile = DataService.Get(player)
+		local sold = profile and profile.stats.sold
+		if not sold then
+			local leaderstats = player:FindFirstChild("leaderstats")
+			local value = leaderstats and leaderstats:FindFirstChild("売った数")
+			sold = if value and value:IsA("IntValue") then value.Value else nil
+		end
+		if not sold or sold <= 0 then
+			return
+		end
+		sold = math.floor(sold)
+		if lastWritten[player.UserId] == sold then
+			return
+		end
+		local okWrite = pcall(function()
+			(store :: OrderedDataStore):SetAsync(tostring(player.UserId), sold)
+		end)
+		if okWrite then
+			lastWritten[player.UserId] = sold
+		end
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		writeScore(player)
+		lastWritten[player.UserId] = nil
+	end)
+	game:BindToClose(function()
+		for _, player in Players:GetPlayers() do
+			task.spawn(writeScore, player)
+		end
+	end)
 
 	task.spawn(function()
 		while true do
 			-- このサーバーにいる人の記録を書き込む
 			for _, player in Players:GetPlayers() do
-				local profile = DataService.Get(player)
-				if profile and profile.stats.sold > 0 then
-					pcall(function()
-						(store :: OrderedDataStore):SetAsync(tostring(player.UserId), math.floor(profile.stats.sold))
-					end)
-				end
+				writeScore(player)
 			end
 			-- 上位を読み込む
 			local okRead, page = pcall(function()
