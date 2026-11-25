@@ -189,6 +189,7 @@ function ItemBuilder.Build(design: Design): Model
 		part.BottomSurface = Enum.SurfaceType.Smooth
 		part.Parent = model
 	end
+	model.WorldPivot = CFrame.new() -- 向きを揃えてから大きさを測る
 	local bbCFrame, bbSize = model:GetBoundingBox()
 	model.WorldPivot = CFrame.new(bbCFrame.Position - Vector3.new(0, bbSize.Y / 2, 0))
 	return model

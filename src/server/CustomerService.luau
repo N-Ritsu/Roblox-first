@@ -95,8 +95,9 @@ local function makeCustomer(position: Vector3): Customer
 			part.CanTouch = false
 		end
 	end
-	model.PrimaryPart = body
+	-- PrimaryPart は設定しない（設定すると横倒しの胴体の向きが基準になってしまう）
 	model.WorldPivot = base
+	local _ = body
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.new(0, 120, 0, 36)
@@ -192,8 +193,11 @@ local function coinBurst(position: Vector3)
 	emitter.EmissionDirection = Enum.NormalId.Top
 	emitter.Rate = 0
 	emitter.Parent = part
-	emitter:Emit(18)
-	task.delay(1.5, function()
+	-- 作った直後はまだクライアントに届いていないので、少し待ってから出す
+	task.delay(0.15, function()
+		emitter:Emit(18)
+	end)
+	task.delay(2, function()
 		part:Destroy()
 	end)
 end

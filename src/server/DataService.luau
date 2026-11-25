@@ -25,6 +25,8 @@ export type Profile = {
 	dailyStreak: number,
 	tutorialDone: boolean,
 	stats: { sold: number, earned: number },
+	lockJobId: string?,
+	lockTime: number?,
 }
 
 local DataService = {}
@@ -84,37 +86,78 @@ local function key(player: Player): string
 	return "u_" .. player.UserId
 end
 
+-- 同じプレイヤーが別サーバーに素早く移ったときに古いデータで上書きしないよう、
+-- データに「どのサーバーが使っているか」の印（lockJobId）をつける簡易ロック
+local LOCK_STALE_SECONDS = 300 -- これより古い印は、落ちたサーバーの残りとみなす
+local LOCK_WAIT_TRIES = 5 -- 他のサーバーが使用中なら、3秒おきにこの回数まで待つ
+
 local function load(player: Player): (Profile, boolean)
 	if not store then
 		return defaultProfile(), false
 	end
-	for attempt = 1, 3 do
-		local ok, result = pcall(function()
-			return (store :: DataStore):GetAsync(key(player))
+	local lockWaits = 0
+	local failures = 0
+	while failures < 3 do
+		local lockedByOther = false
+		local loaded: any = nil
+		local ok, err = pcall(function()
+			(store :: DataStore):UpdateAsync(key(player), function(old: any)
+				local data = if type(old) == "table" then old else defaultProfile()
+				local lockJob = data.lockJobId
+				local lockAge = os.time() - (tonumber(data.lockTime) or 0)
+				if lockJob and lockJob ~= game.JobId and lockAge < LOCK_STALE_SECONDS and lockWaits < LOCK_WAIT_TRIES then
+					lockedByOther = true
+					return nil -- 書き込まずに中止
+				end
+				lockedByOther = false
+				data.lockJobId = game.JobId
+				data.lockTime = os.time()
+				loaded = data
+				return data
+			end)
 		end)
-		if ok then
-			local profile = defaultProfile()
-			if type(result) == "table" then
-				reconcile(result, profile)
-				-- 初期解放分はデータが古くても常に使えるようにする
-				reconcile(result.unlocks, Catalog.DefaultUnlocks())
-				return result :: any, true
+		if not ok then
+			failures += 1
+			warn(("[DataService] 読み込み失敗 (%d/3): %s"):format(failures, tostring(err)))
+			if failures < 3 then
+				task.wait(failures * 2)
 			end
-			return profile, true
+		elseif lockedByOther then
+			lockWaits += 1
+			task.wait(3)
+		elseif loaded then
+			reconcile(loaded, defaultProfile())
+			-- 初期解放分はデータが古くても常に使えるようにする
+			reconcile(loaded.unlocks, Catalog.DefaultUnlocks())
+			return loaded :: Profile, true
+		else
+			failures += 1
 		end
-		warn(("[DataService] 読み込み失敗 (%d/3): %s"):format(attempt, tostring(result)))
-		task.wait(attempt * 2)
+		if not player.Parent then
+			break
+		end
 	end
 	return defaultProfile(), false
 end
 
-local function save(player: Player)
+-- release = true のときはロックの印を外す（退出・サーバー終了時）
+local function save(player: Player, release: boolean?)
 	local profile = profiles[player]
 	if not store or not profile or not canSave[player] then
 		return
 	end
 	local ok, err = pcall(function()
-		(store :: DataStore):SetAsync(key(player), profile)
+		(store :: DataStore):UpdateAsync(key(player), function(old: any)
+			if type(old) == "table" and old.lockJobId and old.lockJobId ~= game.JobId then
+				-- 別のサーバーがすでにこのデータを使っている。古いデータで上書きしない
+				warn("[DataService] 他のサーバーが使用中のため保存を見送りました:", player.UserId)
+				return nil
+			end
+			local data = profile :: any
+			data.lockJobId = if release then nil else game.JobId
+			data.lockTime = os.time()
+			return data
+		end)
 	end)
 	if not ok then
 		warn("[DataService] 保存失敗:", err)
@@ -169,22 +212,31 @@ function DataService.TrySpend(player: Player, amount: number): boolean
 	return true
 end
 
-local function onPlayerAdded(player: Player)
-	local profile, ok = load(player)
-	if not player.Parent then
+local leaving: { [Player]: boolean } = {}
+
+local function onPlayerRemoving(player: Player)
+	if leaving[player] then
 		return
 	end
+	leaving[player] = true
+	save(player, true)
+	profiles[player] = nil
+	canSave[player] = nil
+	leaving[player] = nil
+end
+
+local function onPlayerAdded(player: Player)
+	local profile, ok = load(player)
 	profiles[player] = profile
 	canSave[player] = ok
+	if not player.Parent then
+		-- 読み込み中に抜けた：ロックの印を外して終わる
+		onPlayerRemoving(player)
+		return
+	end
 	setupLeaderstats(player, profile)
 	DataService.Changed(player)
 	loadedEvent:Fire(player, profile)
-end
-
-local function onPlayerRemoving(player: Player)
-	save(player)
-	profiles[player] = nil
-	canSave[player] = nil
 end
 
 function DataService.Start()
@@ -202,22 +254,20 @@ function DataService.Start()
 		while true do
 			task.wait(Config.AutosaveInterval)
 			for player in profiles do
-				task.spawn(save, player)
+				if not leaving[player] then
+					task.spawn(save, player)
+				end
 			end
 		end
 	end)
 
 	game:BindToClose(function()
-		local pending = 0
+		-- 退出処理中でないプレイヤーも保存し、すべて終わるまで待つ
 		for player in profiles do
-			pending += 1
-			task.spawn(function()
-				save(player)
-				pending -= 1
-			end)
+			task.spawn(onPlayerRemoving, player)
 		end
 		local started = os.clock()
-		while pending > 0 and os.clock() - started < 25 do
+		while next(profiles) ~= nil and os.clock() - started < 25 do
 			task.wait(0.1)
 		end
 	end)

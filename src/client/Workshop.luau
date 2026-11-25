@@ -403,6 +403,28 @@ local function save()
 	end
 end
 
+-- 部品の内容が同じか（保存していない変更があるかの判定）
+local function samePartList(a: any, b: any): boolean
+	if #a ~= #b then
+		return false
+	end
+	for i = 1, #a do
+		local p, q = a[i], b[i]
+		if p.shape ~= q.shape or p.color ~= q.color or p.material ~= q.material then
+			return false
+		end
+		for _, field in { "size", "pos", "rot" } do
+			local u, v = p[field], q[field]
+			for j = 1, #u do
+				if u[j] ~= v[j] then
+					return false
+				end
+			end
+		end
+	end
+	return true
+end
+
 local function craft()
 	if busy or not editId then
 		return
@@ -411,9 +433,7 @@ local function craft()
 	local saved = profile and profile.designs[editId]
 	if saved then
 		-- 保存していない変更があるときは、保存したデザインで作ることを知らせる
-		local a = game:GetService("HttpService"):JSONEncode(saved.parts)
-		local b = game:GetService("HttpService"):JSONEncode(editing.parts)
-		if a ~= b then
+		if not samePartList(saved.parts, editing.parts) then
 			toast("変更が保存されていません。先に「保存」してください", UI.Colors.Accent)
 			return
 		end

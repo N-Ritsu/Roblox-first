@@ -55,6 +55,11 @@ function Hud.Start()
 		last = coins
 	end)
 
+	-- サーバーからのお知らせ
+	Net.Event("Notice").OnClientEvent:Connect(function(text: string)
+		UI.Toast(playerGui, text, UI.Colors.Accent)
+	end)
+
 	-- 商品が売れたときのお知らせ
 	Net.Event("Sale").OnClientEvent:Connect(function(itemName: string, price: number)
 		UI.Toast(playerGui, ("「%s」が売れた！ +%d コイン"):format(itemName, price), UI.Colors.Good)

@@ -7,9 +7,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Net = require(Shared:WaitForChild("Net"))
 local Build = require(script.Parent:WaitForChild("Build"))
 
 local PlotService = {}
+
+local noticeEvent = Net.Event("Notice")
 
 export type Plot = {
 	index: number,
@@ -169,6 +172,7 @@ local function assign(player: Player)
 		end
 	end
 	warn("[PlotService] 空き区画がありません:", player.Name)
+	noticeEvent:FireClient(player, "このサーバーは満員でお店を持てません。別のサーバーに入り直してください")
 end
 
 local function release(player: Player)
