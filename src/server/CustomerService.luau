@@ -21,6 +21,7 @@ CustomerService.WalkSpeed = 9
 CustomerService.WillingnessRange = { 0.8, 1.6 } -- 価値に対して払ってもいい額の倍率
 
 local saleEvent = Net.Event("Sale")
+local noticeEvent = Net.Event("Notice")
 local folder: Folder
 local random = Random.new()
 
@@ -49,7 +50,7 @@ type Customer = {
 
 local active: { [number]: number } = {} -- 区画番号 → 店内にいるお客さんの数
 
-local function makeCustomer(position: Vector3): Customer
+local function makeCustomer(position: Vector3, rich: boolean): Customer
 	local model = Instance.new("Model")
 	model.Name = "Customer"
 	local base = CFrame.new(position)
@@ -79,7 +80,30 @@ local function makeCustomer(position: Vector3): Customer
 			CanCollide = false,
 		})
 	end
-	if random:NextNumber() < 0.5 then
+	if rich then
+		-- お金持ち：金色のシルクハットと、きらきら
+		Build.Part(model, {
+			Name = "HatBrim",
+			Size = Vector3.new(0.2, 2.6, 2.6),
+			CFrame = base * CFrame.new(0, 4.15, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(240, 190, 60),
+			Material = Enum.Material.Metal,
+			Shape = Enum.PartType.Cylinder,
+			CanCollide = false,
+		})
+		local hat = Build.Part(model, {
+			Name = "Hat",
+			Size = Vector3.new(1.6, 1.7, 1.7),
+			CFrame = base * CFrame.new(0, 5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(250, 205, 70),
+			Material = Enum.Material.Neon,
+			Shape = Enum.PartType.Cylinder,
+			CanCollide = false,
+		})
+		local sparkle = Instance.new("Sparkles")
+		sparkle.SparkleColor = Color3.fromRGB(255, 230, 120)
+		sparkle.Parent = hat
+	elseif random:NextNumber() < 0.5 then
 		-- 帽子
 		Build.Part(model, {
 			Name = "Hat",
@@ -238,15 +262,21 @@ local function matches(design: any, preference: Preference?): boolean
 end
 
 -- 商品を見て、買うかどうかと一言を決める
-local function decide(design: any, price: number, preference: Preference?): (boolean, string)
+CustomerService.RichChance = 0.08
+CustomerService.RichWillingnessRange = { 1.3, 2.1 }
+
+local function decide(design: any, price: number, preference: Preference?, rich: boolean): (boolean, string)
 	local value = ItemBuilder.Value(design)
-	local range = CustomerService.WillingnessRange
+	local range = if rich then CustomerService.RichWillingnessRange else CustomerService.WillingnessRange
 	local willing = value * random:NextNumber(range[1], range[2])
 	local liked = matches(design, preference)
 	if liked then
 		willing *= CustomerService.PreferenceBonus
 	end
 	if price <= willing then
+		if rich then
+			return true, "気に入った！いただこう"
+		end
 		if liked then
 			return true, "これこれ！ほしかったの！"
 		end
@@ -266,7 +296,8 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 
 	local side = if random:NextNumber() < 0.5 then -1 else 1
 	local start = world(Vector3.new(side * 16, 0.6, -11))
-	local customer = makeCustomer(start)
+	local rich = random:NextNumber() < CustomerService.RichChance
+	local customer = makeCustomer(start, rich)
 	ctx.model = customer.model
 	local function finish()
 		customer.model:Destroy()
@@ -277,8 +308,11 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 	end
 
 	-- 店の前まで来る。好みがあれば吹き出しで教えてくれる
-	local preference = pickPreference()
-	if preference then
+	local preference = if rich then nil else pickPreference()
+	if rich then
+		say(customer, "いい品はあるかね？")
+		noticeEvent:FireClient(owner, "お金持ちのお客さんが来た！")
+	elseif preference then
 		say(customer, preference.text)
 	end
 	if not go(side * 2, 0.6, -10) then
@@ -331,10 +365,10 @@ local function visit(plot: PlotService.Plot, owner: Player, ctx: { model: Model?
 		local design = shelf and profile.designs[shelf.designId]
 		local stock = shelf and profile.stock[shelf.designId] or 0
 		if shelf and design and stock > 0 then
-			local willBuy, line = decide(design, shelf.price, preference)
+			local willBuy, line = decide(design, shelf.price, preference, rich)
 			-- 評判：納得の値段で買えると上がり、高すぎて買えないと下がる
 			if willBuy then
-				ShopService.AddReputation(owner, if shelf.price <= ItemBuilder.Value(design) * 1.1 then 2 else 1)
+				ShopService.AddReputation(owner, if rich then 3 elseif shelf.price <= ItemBuilder.Value(design) * 1.1 then 2 else 1)
 			elseif shelf.price > ItemBuilder.Value(design) * 1.6 then
 				ShopService.AddReputation(owner, -1)
 			end
