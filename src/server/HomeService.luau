@@ -115,6 +115,25 @@ local function applyInterior(plot: PlotService.Plot, wallId: string?, floorId: s
 	end
 end
 
+-- 自宅の灯りの色（party はクライアントの DecorFun が色を動かす）
+local function applyLight(plot: PlotService.Plot, lightId: string?)
+	local home = plot.model:FindFirstChild("Home")
+	if not home then
+		return
+	end
+	local entry = ShopUpgrades.HomeLightById[lightId or "normal"] or ShopUpgrades.HomeLights[1]
+	home:SetAttribute("LightMode", entry.id)
+	for _, lamp in home:GetChildren() do
+		if lamp.Name == "Lamp" and lamp:IsA("BasePart") then
+			lamp.Color = entry.color:Lerp(Color3.new(1, 1, 1), 0.4)
+			local light = lamp:FindFirstChildOfClass("PointLight")
+			if light then
+				light.Color = entry.color
+			end
+		end
+	end
+end
+
 function HomeService.Render(player: Player)
 	local plot = PlotService.Get(player)
 	local profile = DataService.Get(player)
@@ -127,6 +146,7 @@ function HomeService.Render(player: Player)
 	setExtraCells(plot, profile.homeExpanded)
 	setLikes(plot, profile.homeLikes)
 	applyInterior(plot, profile.interior.homeWall, profile.interior.homeFloor)
+	applyLight(plot, profile.homeLight)
 	for key, placed in profile.home do
 		local spot = placement(key, profile.homeExpanded)
 		local design = profile.designs[placed.designId]
@@ -145,6 +165,7 @@ local function clear(plot: PlotService.Plot)
 	setLikes(plot, 0)
 	setExtraCells(plot, false)
 	applyInterior(plot, nil, nil)
+	applyLight(plot, nil)
 	local home = plot.model:FindFirstChild("Home")
 	local folder = home and home:FindFirstChild("Decor")
 	if folder then
@@ -438,6 +459,25 @@ function HomeService.Start()
 			end
 		end
 		return true, if value then "自宅を公開しました" else "自宅を非公開にしました"
+	end
+	Net.Function("SetHomeLight").OnServerInvoke = function(player, id)
+		local now = os.clock()
+		if lastRequest[player] and now - lastRequest[player] < 0.5 then
+			return false, "少し待ってからどうぞ"
+		end
+		lastRequest[player] = now
+		local profile = DataService.Get(player)
+		local entry = type(id) == "string" and ShopUpgrades.HomeLightById[id]
+		if not profile or not entry then
+			return false, "設定できませんでした"
+		end
+		profile.homeLight = entry.id
+		DataService.Changed(player)
+		local plot = PlotService.Get(player)
+		if plot then
+			applyLight(plot, entry.id)
+		end
+		return true, ("灯りを「%s」にしました"):format(entry.name)
 	end
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil

@@ -60,6 +60,14 @@ end
 -- 持っているかの記録（ownedInterior のキー）に使う種類名
 ShopUpgrades.OwnedKind = { wall = "wall", floor = "floor", awning = "awning", sign = "sign", homeWall = "wall", homeFloor = "floor" } :: { [string]: string }
 
+-- 自宅の灯り（無料で切り替え）。party は各自の画面で色が移り変わる
+ShopUpgrades.HomeLights = {
+	{ id = "normal", name = "ふつう", color = Color3.fromRGB(255, 240, 210) },
+	{ id = "warm", name = "あたたか", color = Color3.fromRGB(255, 185, 115) },
+	{ id = "cool", name = "ひんやり", color = Color3.fromRGB(185, 215, 255) },
+	{ id = "party", name = "パーティー", color = Color3.fromRGB(255, 150, 220) },
+}
+
 -- 看板の板の色（文字は明るさに合わせて白か黒になる）
 export type SignStyle = { id: string, name: string, color: Color3, price: number }
 ShopUpgrades.Signs = {
@@ -86,6 +94,7 @@ ShopUpgrades.AwningById = index(ShopUpgrades.Awnings)
 ShopUpgrades.SignById = index(ShopUpgrades.Signs)
 ShopUpgrades.HomeWallById = index(ShopUpgrades.HomeWalls)
 ShopUpgrades.HomeFloorById = index(ShopUpgrades.HomeFloors)
+ShopUpgrades.HomeLightById = index(ShopUpgrades.HomeLights)
 
 -- 次の陳列台の値段（もう増やせなければ nil）
 -- 背景色の上で読みやすい文字色

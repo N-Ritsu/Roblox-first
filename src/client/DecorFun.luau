@@ -102,10 +102,36 @@ local function spinFeatured(plots: Instance)
 	end)
 end
 
+-- 自宅の灯りが「パーティー」なら、灯りの色をゆっくり虹色に変える（見た目だけ）
+local function partyLights(plots: Instance)
+	task.spawn(function()
+		while true do
+			task.wait(0.1)
+			local hue = (os.clock() * 0.15) % 1
+			for _, plot in plots:GetChildren() do
+				local home = plot:FindFirstChild("Home")
+				if home and home:GetAttribute("LightMode") == "party" then
+					local color = Color3.fromHSV(hue, 0.45, 1)
+					for _, lamp in home:GetChildren() do
+						if lamp.Name == "Lamp" and lamp:IsA("BasePart") then
+							lamp.Color = color
+							local light = lamp:FindFirstChildOfClass("PointLight")
+							if light then
+								light.Color = color
+							end
+						end
+					end
+				end
+			end
+		end
+	end)
+end
+
 function DecorFun.Start()
 	local player = Players.LocalPlayer
 	local plots = workspace:WaitForChild("Plots")
 	spinFeatured(plots)
+	partyLights(plots)
 	while true do
 		task.wait(0.15)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")

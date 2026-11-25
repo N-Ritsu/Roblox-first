@@ -36,6 +36,7 @@ export type Profile = {
 	slogan: string, -- 店のキャッチコピー（フィルター済み）
 	featured: string, -- 屋根の上に飾る看板商品のデザインID（"" ならなし）
 	homeExpanded: boolean, -- 自宅を 8×8 に広げたか
+	homeLight: string, -- 自宅の灯り（ShopUpgrades.HomeLights の id）
 	partyDay: number, -- おうちパーティーの報酬を数えている日（日本時間の通し日数）
 	partyCount: number, -- その日に受け取ったパーティー報酬の回数
 	ordersDone: number, -- 達成したお客さんの注文の数
@@ -94,6 +95,7 @@ local function defaultProfile(): Profile
 		slogan = "",
 		featured = "",
 		homeExpanded = false,
+		homeLight = "normal",
 		partyDay = 0,
 		partyCount = 0,
 		ordersDone = 0,

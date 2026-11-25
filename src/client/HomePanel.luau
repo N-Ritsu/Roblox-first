@@ -23,10 +23,13 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local setCellRemote = Net.Function("SetHomeCell")
 local publicRemote = Net.Function("SetHomePublic")
+local lightRemote = Net.Function("SetHomeLight")
+local ShopUpgrades = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("ShopUpgrades"))
 local expandRemote = Net.Function("ExpandHome")
 local deleteRemote = Net.Function("DeleteDesign")
 local discardArmed: string? = nil
 local publicButton: TextButton
+local lightButton: TextButton
 
 local panel: Frame
 local grid: Frame
@@ -61,6 +64,8 @@ local function render()
 	if not profile then
 		return
 	end
+	local currentLight = ShopUpgrades.HomeLightById[profile.homeLight or "normal"] or ShopUpgrades.HomeLights[1]
+	lightButton.Text = "灯り：" .. currentLight.name
 	publicButton.Text = if profile.homePublic then ("公開中 ♥%d"):format(profile.homeLikes or 0) else "非公開"
 	publicButton.BackgroundColor3 = if profile.homePublic then UI.Colors.Good else UI.Colors.Muted
 	-- 壁かけ：奥の壁を向いたとき +X が左なので、左から w6, w5, … w1
@@ -266,13 +271,38 @@ function HomePanel.Start()
 	constraint.Parent = panel
 
 	UI.Label(panel, "模様替え", {
-		Size = UDim2.new(1, -240, 0, 34),
+		Size = UDim2.new(1, -370, 0, 34),
 		Position = UDim2.new(0, 16, 0, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	local close = UI.Button(panel, "×", UI.Colors.Accent, { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(1, -50, 0, 6) })
 	close.Activated:Connect(HomePanel.Close)
 	publicButton = UI.Button(panel, "公開中", UI.Colors.Good, { Size = UDim2.new(0, 150, 0, 36), Position = UDim2.new(1, -210, 0, 8) })
+	-- 灯り：押すたびに次の灯りへ（無料）
+	lightButton = UI.Button(panel, "灯り：ふつう", Color3.fromRGB(250, 215, 120), { Size = UDim2.new(0, 120, 0, 36), Position = UDim2.new(1, -336, 0, 8) })
+	lightButton.Activated:Connect(function()
+		local profile = State.profile
+		if not profile or busy then
+			return
+		end
+		local index = 1
+		for i, entry in ShopUpgrades.HomeLights do
+			if entry.id == (profile.homeLight or "normal") then
+				index = i
+			end
+		end
+		local nextLight = ShopUpgrades.HomeLights[index % #ShopUpgrades.HomeLights + 1]
+		busy = true
+		local ok, result, message = pcall(function()
+			return lightRemote:InvokeServer(nextLight.id)
+		end)
+		busy = false
+		if ok then
+			toast(tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
+		else
+			toast("通信に失敗しました", UI.Colors.Accent)
+		end
+	end)
 	publicButton.Activated:Connect(function()
 		local profile = State.profile
 		if not profile or busy then
