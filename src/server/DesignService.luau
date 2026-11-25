@@ -9,6 +9,7 @@ local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
+local HomeService = require(script.Parent:WaitForChild("HomeService"))
 
 local DesignService = {}
 
@@ -78,6 +79,7 @@ local function saveDesign(player: Player, raw: any, editId: any): (boolean, stri
 	profile.designs[id] = design
 	DataService.Changed(player)
 	ShopService.Render(player)
+	HomeService.Render(player)
 	return true, id
 end
 
@@ -94,8 +96,15 @@ local function deleteDesign(player: Player, id: any): (boolean, string)
 			profile.shelves[slot] = nil
 		end
 	end
+	-- 自宅に飾っていたら外す
+	for cell, placed in profile.home do
+		if placed.designId == id then
+			profile.home[cell] = nil
+		end
+	end
 	DataService.Changed(player)
 	ShopService.Render(player)
+	HomeService.Render(player)
 	return true, id
 end
 

@@ -52,6 +52,86 @@ PlotService.SpawnOffset = CFrame.new(0, 4, 10) -- 店の入口の方を向いて
 PlotService.WorkbenchOffset = CFrame.new(-8, 0.9, 14)
 PlotService.EntranceOffset = CFrame.new(0, 1, -10) -- 店の前の歩道
 
+-- 自宅：店の上空にある部屋。床にマス目（GridSize×GridSize）があり、作ったアイテムを飾れる
+PlotService.HomeOffset = CFrame.new(0, 250, 4) -- 部屋の床の上面中央
+PlotService.HomeGridSize = 6
+PlotService.HomeCellSize = 4.5
+PlotService.HomeSpawnOffset = PlotService.HomeOffset * CFrame.new(0, 3, -12)
+PlotService.HomeDoorOffset = CFrame.new(-13.85, 4.4, 4.5) -- 店の中の「自宅」ドア
+
+-- マス目 (x, z)（1〜GridSize）の中心（自宅の床の上面、区画のローカル座標）
+function PlotService.HomeCellOffset(x: number, z: number): CFrame
+	local half = (PlotService.HomeGridSize + 1) / 2
+	return PlotService.HomeOffset * CFrame.new((x - half) * PlotService.HomeCellSize, 0, (z - half) * PlotService.HomeCellSize + 2)
+end
+
+local function buildHome(model: Model, origin: CFrame, accent: Color3)
+	local home = Instance.new("Model")
+	home.Name = "Home"
+	local base = origin * PlotService.HomeOffset
+	local function at(x: number, y: number, z: number): CFrame
+		return base * CFrame.new(x, y, z)
+	end
+	local wall = Color3.fromRGB(245, 235, 250)
+	Build.Part(home, { Name = "Floor", Size = Vector3.new(34, 1, 34), CFrame = at(0, -0.5, 0), Color = Color3.fromRGB(190, 145, 100), Material = Enum.Material.WoodPlanks })
+	Build.Part(home, { Name = "Rug", Size = Vector3.new(28, 0.1, 28), CFrame = at(0, 0.05, 2), Color = accent:Lerp(Color3.new(1, 1, 1), 0.55), Material = Enum.Material.Fabric, CanCollide = false })
+	Build.Part(home, { Name = "Ceiling", Size = Vector3.new(34, 1, 34), CFrame = at(0, 14.5, 0), Color = Color3.new(1, 1, 1) })
+	Build.Part(home, { Name = "WallBack", Size = Vector3.new(34, 14, 1), CFrame = at(0, 7, 17.5), Color = wall })
+	Build.Part(home, { Name = "WallFront", Size = Vector3.new(34, 14, 1), CFrame = at(0, 7, -17.5), Color = wall })
+	Build.Part(home, { Name = "WallLeft", Size = Vector3.new(1, 14, 34), CFrame = at(-17.5, 7, 0), Color = wall })
+	Build.Part(home, { Name = "WallRight", Size = Vector3.new(1, 14, 34), CFrame = at(17.5, 7, 0), Color = wall })
+	-- 窓（外の景色の代わりに明るい空色の板）
+	for _, x in { -17, 17 } do
+		Build.Part(home, { Name = "Window", Size = Vector3.new(0.2, 5, 9), CFrame = at(x * 0.995, 8, 0), Color = Color3.fromRGB(170, 220, 255), Material = Enum.Material.Neon, CanCollide = false })
+	end
+	-- 天井の照明
+	local lamp = Build.Part(home, { Name = "Lamp", Size = Vector3.new(6, 0.4, 6), CFrame = at(0, 13.8, 0), Color = Color3.fromRGB(255, 245, 215), Material = Enum.Material.Neon, CanCollide = false })
+	local light = Instance.new("PointLight")
+	light.Range = 40
+	light.Brightness = 1.5
+	light.Color = Color3.fromRGB(255, 240, 210)
+	light.Parent = lamp
+
+	-- 出口のドア
+	local door = Build.Part(home, { Name = "ExitDoor", Size = Vector3.new(5, 8, 0.4), CFrame = at(-10, 4, -17), Color = accent, Material = Enum.Material.Wood })
+	Build.Sign(door, "お店へ", Enum.NormalId.Back)
+	local exitPrompt = Instance.new("ProximityPrompt")
+	exitPrompt.Name = "HomeExitPrompt"
+	exitPrompt.ActionText = "お店にもどる"
+	exitPrompt.ObjectText = "ドア"
+	exitPrompt.HoldDuration = 0
+	exitPrompt.MaxActivationDistance = 9
+	exitPrompt.RequiresLineOfSight = false
+	exitPrompt.Parent = door
+
+	-- 模様替えの看板
+	local board = Build.Part(home, { Name = "DecorBoard", Size = Vector3.new(6, 3, 0.4), CFrame = at(10, 4, -17), Color = Color3.fromRGB(120, 80, 55), Material = Enum.Material.Wood })
+	Build.Sign(board, "模様替え", Enum.NormalId.Back)
+	local decorPrompt = Instance.new("ProximityPrompt")
+	decorPrompt.Name = "HomeDecorPrompt"
+	decorPrompt.ActionText = "アイテムを飾る"
+	decorPrompt.ObjectText = "模様替え"
+	decorPrompt.HoldDuration = 0
+	decorPrompt.MaxActivationDistance = 9
+	decorPrompt.RequiresLineOfSight = false
+	decorPrompt.Parent = board
+
+	-- マス目の目印（うっすら）
+	for x = 1, PlotService.HomeGridSize do
+		for z = 1, PlotService.HomeGridSize do
+			Build.Part(home, {
+				Name = "Cell",
+				Size = Vector3.new(PlotService.HomeCellSize - 0.4, 0.05, PlotService.HomeCellSize - 0.4),
+				CFrame = origin * PlotService.HomeCellOffset(x, z) * CFrame.new(0, 0.12, 0),
+				Color = Color3.new(1, 1, 1),
+				Transparency = 0.75,
+				CanCollide = false,
+			})
+		end
+	end
+	home.Parent = model
+end
+
 local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 	local model = Instance.new("Model")
 	model.Name = "Plot" .. index
@@ -117,6 +197,19 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = bench
+
+	-- 自宅へのドア（左の壁）
+	local homeDoor = Build.Part(model, { Name = "HomeDoor", Size = Vector3.new(0.3, 7, 4), CFrame = origin * PlotService.HomeDoorOffset, Color = awningColor, Material = Enum.Material.Wood })
+	Build.Sign(homeDoor, "自宅", Enum.NormalId.Right)
+	local homePrompt = Instance.new("ProximityPrompt")
+	homePrompt.Name = "HomeEnterPrompt"
+	homePrompt.ActionText = "自宅に入る"
+	homePrompt.ObjectText = "ドア"
+	homePrompt.HoldDuration = 0
+	homePrompt.MaxActivationDistance = 9
+	homePrompt.RequiresLineOfSight = false
+	homePrompt.Parent = homeDoor
+	buildHome(model, origin, awningColor)
 
 	-- 照明
 	local lampPart = Build.Part(model, { Name = "Lamp", Size = Vector3.new(4, 0.4, 4), CFrame = at(0, 12.7, 6), Color = Color3.fromRGB(255, 245, 210), Material = Enum.Material.Neon, CanCollide = false })
