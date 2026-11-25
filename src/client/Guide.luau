@@ -111,6 +111,9 @@ function Guide.Start()
 			finished = true
 			bar.Visible = false
 			Net.Event("TutorialDone"):FireServer()
+			if lastStep ~= 4 then
+				return -- 以前から売ったことがある人には出さない
+			end
 			UI.Toast(playerGui, "初めての売上おめでとう！「部品」で新しい部品を解放しよう", UI.Colors.Good)
 			return
 		end

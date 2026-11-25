@@ -39,6 +39,43 @@ local function filterName(player: Player, name: string): string?
 	return nil
 end
 
+local function sameParts(a: any, b: any): boolean
+	if #a ~= #b then
+		return false
+	end
+	for i = 1, #a do
+		local p, q = a[i], b[i]
+		if p.shape ~= q.shape or p.color ~= q.color or p.material ~= q.material then
+			return false
+		end
+		for _, field in { "size", "pos", "rot" } do
+			for j = 1, #p[field] do
+				if p[field][j] ~= q[field][j] then
+					return false
+				end
+			end
+		end
+	end
+	return true
+end
+
+local function isInUse(profile: any, id: string): boolean
+	if (profile.stock[id] or 0) > 0 then
+		return true
+	end
+	for _, shelf in profile.shelves do
+		if shelf.designId == id then
+			return true
+		end
+	end
+	for _, placed in profile.home do
+		if placed.designId == id then
+			return true
+		end
+	end
+	return false
+end
+
 local function countDesigns(profile: any): number
 	local n = 0
 	for _, design in profile.designs do
@@ -70,6 +107,12 @@ local function saveDesign(player: Player, raw: any, editId: any): (boolean, stri
 	local id: string
 	if type(editId) == "string" and profile.designs[editId] and profile.designs[editId].boughtFrom then
 		return false, "買ったアイテムは編集できません"
+	end
+	-- 作り済みの在庫があるデザインは、形を変えると安く作って高く売れてしまうので名前の変更だけにする
+	if type(editId) == "string" and profile.designs[editId] and not sameParts(profile.designs[editId].parts, design.parts) then
+		if isInUse(profile, editId) then
+			return false, "在庫・棚・自宅にあるデザインは形を変えられません。「新しく作る」で別に保存してください"
+		end
 	end
 	if type(editId) == "string" and profile.designs[editId] then
 		id = editId

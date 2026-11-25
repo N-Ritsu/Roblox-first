@@ -56,7 +56,7 @@ PlotService.EntranceOffset = CFrame.new(0, 1, -10) -- 店の前の歩道
 PlotService.HomeOffset = CFrame.new(0, 250, 4) -- 部屋の床の上面中央
 PlotService.HomeGridSize = 6
 PlotService.HomeCellSize = 4.5
-PlotService.HomeSpawnOffset = PlotService.HomeOffset * CFrame.new(0, 3, -12)
+PlotService.HomeSpawnOffset = PlotService.HomeOffset * CFrame.new(0, 3, -12) * CFrame.Angles(0, math.pi, 0) -- 部屋の奥を向く
 PlotService.HomeDoorOffset = CFrame.new(-13.85, 4.4, 4.5) -- 店の中の「自宅」ドア
 
 -- マス目 (x, z)（1〜GridSize）の中心（自宅の床の上面、区画のローカル座標）

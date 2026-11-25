@@ -271,7 +271,7 @@ function ShelfPanel.Start()
 			ShelfPanel.Open(slot)
 		elseif type(ownerId) == "number" then
 			-- 他の人のお店：買う
-			invoke(buyRemote, ownerId, slot)
+			invoke(buyRemote, ownerId, slot, prompt:GetAttribute("Price"))
 		else
 			toast("ここは空き店舗です")
 		end

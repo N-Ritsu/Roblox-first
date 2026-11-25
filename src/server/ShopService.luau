@@ -40,11 +40,13 @@ local function displayFolder(plot: PlotService.Plot): Folder
 end
 
 -- 棚のプロンプトに商品名と値段を出す（訪れた人が何を売っているか分かるように）
-local function setPromptText(plot: PlotService.Plot, slot: number, text: string?)
+-- 値段（Price 属性）は購入時に「見た値段」として送り返してもらい、途中で値上げされていないか確かめる
+local function setPromptText(plot: PlotService.Plot, slot: number, text: string?, price: number?)
 	local tablePart = plot.model:FindFirstChild("ShelfTable" .. slot)
 	local prompt = tablePart and tablePart:FindFirstChild("ShelfPrompt")
 	if prompt and prompt:IsA("ProximityPrompt") then
 		prompt.ObjectText = text or ("陳列台 " .. slot)
+		prompt:SetAttribute("Price", price)
 	end
 end
 
@@ -69,7 +71,7 @@ function ShopService.Render(player: Player)
 		local design = shelf and profile.designs[shelf.designId]
 		if shelf and design then
 			local left = profile.stock[shelf.designId] or 0
-			setPromptText(plot, slot, if left > 0 then ("%s・%d コイン"):format(design.name, shelf.price) else design.name .. "・売り切れ")
+			setPromptText(plot, slot, if left > 0 then ("%s・%d コイン"):format(design.name, shelf.price) else design.name .. "・売り切れ", shelf.price)
 		else
 			setPromptText(plot, slot, nil)
 		end
@@ -194,11 +196,15 @@ end
 
 -- 他のプレイヤーの店の棚から買う。買ったアイテムは自宅に飾れる（作り直し・転売はできない）
 ShopService.MaxBought = 30
-local function buy(buyer: Player, ownerUserId: any, slot: any): (boolean, string)
+local function buy(buyer: Player, ownerUserId: any, slot: any, seenPrice: any): (boolean, string)
 	if tooFast(buyer) then
 		return false, "少し待ってからどうぞ"
 	end
 	if type(ownerUserId) ~= "number" or type(slot) ~= "number" or slot ~= slot then
+		return false, "お店が見つかりません"
+	end
+	slot = math.floor(slot)
+	if slot < 1 or slot > ShopService.SlotCount then
 		return false, "お店が見つかりません"
 	end
 	local seller = Players:GetPlayerByUserId(ownerUserId)
@@ -218,6 +224,17 @@ local function buy(buyer: Player, ownerUserId: any, slot: any): (boolean, string
 	local stock = sellerProfile.stock[shelf.designId] or 0
 	if stock <= 0 then
 		return false, "売り切れです"
+	end
+	if seenPrice ~= shelf.price then
+		return false, ("値段が変わりました（今は %d コイン）"):format(shelf.price)
+	end
+	-- 店の棚の近くにいるときだけ買える
+	local plot = PlotService.Get(seller)
+	local tablePart = plot and plot.model:FindFirstChild("ShelfTable" .. slot)
+	local character = buyer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not tablePart or not root or ((root :: BasePart).Position - (tablePart :: BasePart).Position).Magnitude > 16 then
+		return false, "棚に近づいてから買ってください"
 	end
 	-- 同じ店の同じ商品は1つのアイテムとしてまとめる
 	local sourceKey = seller.UserId .. ":" .. shelf.designId

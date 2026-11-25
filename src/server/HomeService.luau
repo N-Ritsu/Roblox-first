@@ -89,15 +89,17 @@ local function setCell(player: Player, key: any, action: any, designId: any): (b
 		if type(designId) ~= "string" or not profile.designs[designId] then
 			return false, "デザインが見つかりません"
 		end
-		local stock = profile.stock[designId] or 0
-		if stock <= 0 then
+		if current and current.designId == designId then
+			return false, "もう置いてあります"
+		end
+		if (profile.stock[designId] or 0) <= 0 then
 			return false, "在庫がありません。工房で作りましょう"
 		end
 		-- すでに何か置いてあれば在庫に戻してから置き換える
 		if current and profile.designs[current.designId] then
 			profile.stock[current.designId] = (profile.stock[current.designId] or 0) + 1
 		end
-		profile.stock[designId] = stock - 1
+		profile.stock[designId] = (profile.stock[designId] or 0) - 1
 		profile.home[cell] = { designId = designId, rot = 0 }
 	elseif action == "rotate" then
 		if not current then
