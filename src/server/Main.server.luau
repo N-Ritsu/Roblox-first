@@ -11,6 +11,7 @@ local services = {
 	"DailyService",
 	"HomeService",
 	"RankingService",
+	"GoalService",
 }
 
 for _, name in services do

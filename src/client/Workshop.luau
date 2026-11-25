@@ -617,7 +617,7 @@ local function createGui()
 	local openButton = UI.Button(gui, "工房", Color3.fromRGB(90, 170, 240), {
 		Name = "OpenWorkshop",
 		Size = UDim2.new(0, 96, 0, 44),
-		Position = UDim2.new(0, 16, 0.5, -22),
+		Position = UDim2.new(0, 16, 0.5, -70),
 	})
 	UI.Stroke(openButton, Color3.fromRGB(40, 100, 170), 2)
 	openButton.Activated:Connect(function()

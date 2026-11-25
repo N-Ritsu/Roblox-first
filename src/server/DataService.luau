@@ -25,6 +25,7 @@ export type Profile = {
 	shelfSlots: number, -- 使える陳列台の数
 	interior: { wall: string, floor: string },
 	ownedInterior: { [string]: boolean }, -- 買った内装（"wall:Mint" など）
+	goalsClaimed: { [string]: boolean }, -- 報酬を受け取った目標
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -68,6 +69,7 @@ local function defaultProfile(): Profile
 		shelfSlots = 4,
 		interior = { wall = "Cream", floor = "Wood" },
 		ownedInterior = {},
+		goalsClaimed = {},
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,

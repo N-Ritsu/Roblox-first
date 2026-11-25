@@ -177,7 +177,7 @@ function ShopPanel.Start()
 	local openButton = UI.Button(gui, "お店", Color3.fromRGB(150, 110, 210), {
 		Name = "OpenShopPanel",
 		Size = UDim2.new(0, 96, 0, 44),
-		Position = UDim2.new(0, 16, 0.5, 82),
+		Position = UDim2.new(0, 16, 0.5, 30),
 	})
 	UI.Stroke(openButton, Color3.fromRGB(100, 70, 150), 2)
 	openButton.Activated:Connect(function()
