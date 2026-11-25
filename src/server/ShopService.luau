@@ -555,6 +555,19 @@ local function buyFlyer(player: Player): (boolean, string)
 	if ShopService.FlyerActive(player) then
 		return false, "チラシの効果がまだ続いています"
 	end
+	-- 並べている商品がないとお客さんは来ないので、先に知らせる
+	local profile = DataService.Get(player)
+	local hasStocked = false
+	if profile and PlotService.Get(player) then
+		for key, shelf in profile.shelves do
+			if (tonumber(key) or 99) <= profile.shelfSlots and profile.designs[shelf.designId] and (profile.stock[shelf.designId] or 0) > 0 then
+				hasStocked = true
+			end
+		end
+	end
+	if not hasStocked then
+		return false, "先に商品を棚に並べよう（並べていないとお客さんは来ません）"
+	end
 	if not DataService.TrySpend(player, ShopService.FlyerPrice) then
 		return false, ("コインが足りません（%d コイン必要）"):format(ShopService.FlyerPrice)
 	end

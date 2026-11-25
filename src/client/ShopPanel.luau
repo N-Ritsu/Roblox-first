@@ -19,9 +19,7 @@ local interiorRemote = Net.Function("SetInterior")
 local sloganRemote = Net.Function("SetSlogan")
 local flyerRemote = Net.Function("BuyFlyer")
 local flyerEnds = 0
-Net.Event("FlyerUntil").OnClientEvent:Connect(function(seconds: number)
-	flyerEnds = os.clock() + seconds
-end)
+local render: () -> ()
 local openSlogan: () -> () = function() end
 
 local panel: Frame
@@ -68,7 +66,7 @@ local function grid(order: number): Frame
 	return frame
 end
 
-local function render()
+render = function()
 	local profile = State.profile
 	if not profile then
 		return
@@ -233,6 +231,24 @@ function ShopPanel.Start()
 	State.Changed:Connect(function()
 		if panel.Visible then
 			render()
+		end
+	end)
+	Net.Event("FlyerUntil").OnClientEvent:Connect(function(seconds: number)
+		flyerEnds = os.clock() + seconds
+		if panel.Visible then
+			render()
+		end
+	end)
+	-- チラシの残り時間を1秒ごとに更新（終わった直後にも1回）
+	task.spawn(function()
+		local wasActive = false
+		while true do
+			task.wait(1)
+			local isActive = flyerEnds > os.clock()
+			if panel.Visible and (isActive or wasActive) then
+				render()
+			end
+			wasActive = isActive
 		end
 	end)
 end
