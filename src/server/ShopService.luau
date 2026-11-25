@@ -511,6 +511,9 @@ local function setSlogan(player: Player, text: any): (boolean, string)
 	if not profile or type(text) ~= "string" then
 		return false, "設定できませんでした"
 	end
+	if #text > 200 then
+		return false, ("%d文字までです"):format(ShopService.SloganMaxLength)
+	end
 	text = string.gsub(text, "[%c]", "")
 	text = string.gsub(text, "^%s+", "")
 	text = string.gsub(text, "%s+$", "")

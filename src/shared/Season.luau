@@ -5,7 +5,7 @@ local Season = {}
 
 -- 日本時間の今日の月・日
 function Season.TodayJST(): (number, number)
-	local t = os.date("!*t", os.time() + 9 * 3600) :: any
+	local t = os.date("!*t", math.floor(workspace:GetServerTimeNow()) + 9 * 3600) :: any
 	return t.month, t.day
 end
 

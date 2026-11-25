@@ -26,7 +26,8 @@ Theme.Bonus = 1.3 -- お題に合う商品の、払ってもいい額の倍率
 
 -- 1970/1/1 は木曜なので、月曜はじまりにするため3日ずらす
 local function weekIndex(): number
-	local jst = os.time() + 9 * 3600
+	-- クライアントの時計がずれていてもサーバーと同じ週になるよう、サーバー時刻を使う
+	local jst = math.floor(workspace:GetServerTimeNow()) + 9 * 3600
 	return math.floor((jst + 3 * 86400) / (7 * 86400))
 end
 
