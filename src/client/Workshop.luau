@@ -430,7 +430,7 @@ local function buildDesignList()
 				table.insert(missing, if shape then shape.name else shapeId)
 			end
 		end
-		local needText = if #missing > 0 then ("（%sの解放が必要）"):format(table.concat(missing, "・")) else ""
+		local needText = if #missing > 0 then ("（要：%s）"):format(table.concat(missing, "・")) else ""
 		local button = UI.Button(
 			designList,
 			"見本：" .. template.name .. needText,

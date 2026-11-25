@@ -209,11 +209,11 @@ HomeService.PartyCoinsPerGuest = 5 -- 店主がもらう（訪問者1人あた�
 HomeService.PartyGuestCoins = 3 -- 訪問者がもらう
 HomeService.PartyDailyLimit = 30 -- 1人が1日に受け取れる回数（サブアカウントでの放置稼ぎ対策）
 
--- 今日まだ受け取れるなら回数を1つ使って true
-local function takePartyTurn(player: Player): boolean
+-- 今日まだ受け取れるなら回数を1つ使って true（2つ目は今日の最後の1回だったか）
+local function takePartyTurn(player: Player): (boolean, boolean)
 	local profile = DataService.Get(player)
 	if not profile then
-		return false
+		return false, false
 	end
 	local day = math.floor((os.time() + 9 * 3600) / 86400) -- 日本時間の通し日数
 	if profile.partyDay ~= day then
@@ -221,11 +221,13 @@ local function takePartyTurn(player: Player): boolean
 		profile.partyCount = 0
 	end
 	if profile.partyCount >= HomeService.PartyDailyLimit then
-		return false
+		return false, false
 	end
 	profile.partyCount += 1
-	return true
+	return true, profile.partyCount >= HomeService.PartyDailyLimit
 end
+
+local LAST_NOTE = "（今日のパーティーボーナスはここまで。また明日！）"
 
 local function partyTick()
 	local players = game:GetService("Players"):GetPlayers()
@@ -239,15 +241,19 @@ local function partyTick()
 				end
 			end
 			if #guests > 0 then
-				if takePartyTurn(owner) then
+				local ok, last = takePartyTurn(owner)
+				if ok then
 					local reward = math.min(#guests, 5) * HomeService.PartyCoinsPerGuest
 					DataService.AddCoins(owner, reward)
-					Net.Event("Notice"):FireClient(owner, ("おうちパーティー！ お客さん%d人で +%d コイン"):format(#guests, reward))
+					local text = ("おうちパーティー！ お客さん%d人で +%d コイン"):format(#guests, reward)
+					Net.Event("Notice"):FireClient(owner, if last then text .. LAST_NOTE else text)
 				end
 				for _, guest in guests do
-					if takePartyTurn(guest) then
+					local okGuest, lastGuest = takePartyTurn(guest)
+					if okGuest then
 						DataService.AddCoins(guest, HomeService.PartyGuestCoins)
-						Net.Event("Notice"):FireClient(guest, ("おうちパーティー！ +%d コイン"):format(HomeService.PartyGuestCoins))
+						local text = ("おうちパーティー！ +%d コイン"):format(HomeService.PartyGuestCoins)
+						Net.Event("Notice"):FireClient(guest, if lastGuest then text .. LAST_NOTE else text)
 					end
 				end
 			end
