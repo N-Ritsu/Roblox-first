@@ -216,6 +216,7 @@ function ShopService.OfflineSales(player: Player, profile: any)
 	end
 	local random = Random.new()
 	local count, earned = 0, 0
+	local perDesign: { [string]: number } = {} -- いちばん売れた品をカードで見せるため
 	for i = 1, chances do
 		local shelf = profile.shelves[tostring(slots[(i - 1) % #slots + 1])]
 		local design = profile.designs[shelf.designId]
@@ -227,6 +228,7 @@ function ShopService.OfflineSales(player: Player, profile: any)
 			if random:NextNumber() < chance then
 				profile.stock[shelf.designId] = stock - 1
 				ShopService.RecordSale(profile, shelf.designId, 1)
+				perDesign[shelf.designId] = (perDesign[shelf.designId] or 0) + 1
 				count += 1
 				earned += shelf.price
 			end
@@ -239,9 +241,17 @@ function ShopService.OfflineSales(player: Player, profile: any)
 	profile.stats.earned += earned
 	DataService.AddToday(profile, count, earned, 0)
 	DataService.AddCoins(player, earned)
+	local topId, topCount = nil, 0
+	for id, n in perDesign do
+		if n > topCount then
+			topId, topCount = id, n
+		end
+	end
+	local topDesign = topId and profile.designs[topId]
+	local topName = if topDesign then topDesign.name else nil -- 名前は保存時にフィルター済み
 	task.delay(5, function()
 		if player.Parent then
-			offlineEvent:FireClient(player, count, earned)
+			offlineEvent:FireClient(player, count, earned, topName, topCount)
 		end
 	end)
 end

@@ -155,12 +155,12 @@ function Guide.Start()
 	end)
 
 	-- 留守中の売上
-	Net.Event("OfflineSales").OnClientEvent:Connect(function(count: number, earned: number)
+	Net.Event("OfflineSales").OnClientEvent:Connect(function(count: number, earned: number, topName: string?, topCount: number?)
 		Sounds.Play("reward")
 		local card = UI.Frame(gui, {
 			AnchorPoint = Vector2.new(0.5, 0),
 			Position = UDim2.new(0.5, 0, 0.72, 0),
-			Size = UDim2.new(0, 320, 0, 70),
+			Size = UDim2.new(0, 320, 0, if type(topName) == "string" and count >= 2 then 94 else 70),
 			BackgroundColor3 = Color3.fromRGB(230, 250, 230),
 		})
 		UI.Corner(card, 14)
@@ -171,6 +171,14 @@ function Guide.Start()
 			Position = UDim2.new(0, 10, 0, 36),
 			TextColor3 = Color3.fromRGB(210, 140, 20),
 		})
+		-- いちばん売れた品（2個以上売れたときだけ。1個なら言うまでもないので）
+		if type(topName) == "string" and count >= 2 then
+			UI.Label(card, ("いちばん売れたのは「%s」（%d個）"):format(topName, tonumber(topCount) or 1), {
+				Size = UDim2.new(1, -20, 0, 20),
+				Position = UDim2.new(0, 10, 0, 66),
+				TextColor3 = Color3.fromRGB(70, 110, 70),
+			})
+		end
 		task.delay(7, function()
 			card:Destroy()
 		end)
