@@ -4,6 +4,8 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
 
@@ -51,6 +53,11 @@ function Hud.Start()
 			}):Play()
 		end
 		last = coins
+	end)
+
+	-- 商品が売れたときのお知らせ
+	Net.Event("Sale").OnClientEvent:Connect(function(itemName: string, price: number)
+		UI.Toast(playerGui, ("「%s」が売れた！ +%d コイン"):format(itemName, price), UI.Colors.Good)
 	end)
 end
 
