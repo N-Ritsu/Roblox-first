@@ -21,14 +21,14 @@ local function cellKey(x: number, z: number): string
 	return x .. "_" .. z
 end
 
-local function parseCell(key: any): (number?, number?)
+local function parseCell(key: any, expanded: boolean?): (number?, number?)
 	if type(key) ~= "string" then
 		return nil, nil
 	end
 	local xs, zs = string.match(key, "^(%d+)_(%d+)$")
 	local x, z = tonumber(xs), tonumber(zs)
-	local n = PlotService.HomeGridSize
-	if not x or not z or x < 1 or x > n or z < 1 or z > n then
+	local minCell, maxCell = PlotService.HomeGridRange(expanded == true)
+	if not x or not z or x < minCell or x > maxCell or z < minCell or z > maxCell then
 		return nil, nil
 	end
 	return x, z
@@ -43,6 +43,19 @@ local function decorFolder(plot: PlotService.Plot): Folder
 		folder.Parent = home
 	end
 	return folder :: Folder
+end
+
+-- 広げた分のマス目の目印を見せる／隠す
+local function setExtraCells(plot: PlotService.Plot, visible: boolean)
+	local home = plot.model:FindFirstChild("Home")
+	if not home then
+		return
+	end
+	for _, part in home:GetChildren() do
+		if part.Name == "CellExtra" and part:IsA("BasePart") then
+			part.Transparency = if visible then 0.75 else 1
+		end
+	end
 end
 
 local function setLikes(plot: PlotService.Plot, likes: number)
@@ -64,9 +77,10 @@ function HomeService.Render(player: Player)
 	local folder = decorFolder(plot)
 	folder:ClearAllChildren()
 	plot.model:SetAttribute("HomePublic", profile.homePublic) -- クライアントのドアの表示に使う
+	setExtraCells(plot, profile.homeExpanded)
 	setLikes(plot, profile.homeLikes)
 	for key, placed in profile.home do
-		local x, z = parseCell(key)
+		local x, z = parseCell(key, profile.homeExpanded)
 		local design = profile.designs[placed.designId]
 		if x and z and design then
 			local item = ItemBuilder.BuildFitted(design, PlotService.HomeCellSize - 0.5)
@@ -80,6 +94,7 @@ end
 local function clear(plot: PlotService.Plot)
 	plot.model:SetAttribute("HomePublic", nil)
 	setLikes(plot, 0)
+	setExtraCells(plot, false)
 	local home = plot.model:FindFirstChild("Home")
 	local folder = home and home:FindFirstChild("Decor")
 	if folder then
@@ -96,7 +111,7 @@ local function setCell(player: Player, key: any, action: any, designId: any): (b
 	end
 	lastRequest[player] = now
 	local profile = DataService.Get(player)
-	local x, z = parseCell(key)
+	local x, z = parseCell(key, profile and profile.homeExpanded)
 	if not profile or not x or not z then
 		return false, "その場所には置けません"
 	end
@@ -161,7 +176,8 @@ evictVisitors = function(plot: PlotService.Plot, owner: Player?)
 		local root = other ~= owner and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") then
 			local p = room:PointToObjectSpace(root.Position)
-			if math.abs(p.X) < 17 and math.abs(p.Z) < 17 and p.Y > -1 and p.Y < 15 then
+			local half = PlotService.HomeRoomHalf
+			if math.abs(p.X) < half and math.abs(p.Z) < half and p.Y > -1 and p.Y < 15 then
 				local home = PlotService.Get(other) or plot
 				task.spawn(teleport, other, home.origin * PlotService.SpawnOffset)
 				Net.Event("Notice"):FireClient(other, "この自宅は閉じられました")
@@ -253,6 +269,22 @@ function HomeService.Start()
 		evictVisitors(plot, nil)
 		clear(plot)
 	end)
+	Net.Function("ExpandHome").OnServerInvoke = function(player)
+		local profile = DataService.Get(player)
+		if not profile then
+			return false, "データを読み込み中です"
+		end
+		if profile.homeExpanded then
+			return false, "もう広げています"
+		end
+		if not DataService.TrySpend(player, PlotService.HomeExpandPrice) then
+			return false, ("コインが足りません（%d コイン必要）"):format(PlotService.HomeExpandPrice)
+		end
+		profile.homeExpanded = true
+		DataService.Changed(player)
+		HomeService.Render(player)
+		return true, "自宅が 8×8 に広くなりました！"
+	end
 	Net.Function("SetHomePublic").OnServerInvoke = function(player, value)
 		local now = os.clock()
 		if lastRequest[player] and now - lastRequest[player] < 0.5 then

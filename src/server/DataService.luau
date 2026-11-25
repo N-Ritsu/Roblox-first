@@ -34,6 +34,7 @@ export type Profile = {
 	homeLikedBy: { [string]: boolean }, -- いいねしてくれた人の UserId
 	maxParts: number, -- アイテム1つに使える部品の数
 	slogan: string, -- 店のキャッチコピー（フィルター済み）
+	homeExpanded: boolean, -- 自宅を 8×8 に広げたか
 	lastDaily: number,
 	dailyStreak: number,
 	tutorialDone: boolean,
@@ -86,6 +87,7 @@ local function defaultProfile(): Profile
 		homeLikedBy = {},
 		maxParts = 6,
 		slogan = "",
+		homeExpanded = false,
 		lastDaily = 0,
 		dailyStreak = 0,
 		tutorialDone = false,

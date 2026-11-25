@@ -14,11 +14,14 @@ local UI = require(script.Parent:WaitForChild("UI"))
 local HomePanel = {}
 
 local GRID = 6 -- サーバーの PlotService.HomeGridSize と同じ
+local EXPAND_PRICE = 800 -- サーバーの PlotService.HomeExpandPrice と同じ
+local gridLayout: UIGridLayout
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local setCellRemote = Net.Function("SetHomeCell")
 local publicRemote = Net.Function("SetHomePublic")
+local expandRemote = Net.Function("ExpandHome")
 local publicButton: TextButton
 
 local panel: Frame
@@ -62,10 +65,14 @@ local function render()
 		end
 	end
 	-- 部屋の奥（z が大きい方）を上に、入口側を下に並べる。部屋の奥を向いたとき +X は左手側
-	for row = 1, GRID do
-		local z = GRID + 1 - row
-		for col = 1, GRID do
-			local x = GRID + 1 - col
+	-- 広げると外側に1列ずつ増える（キーは 0〜GRID+1）
+	local minCell, maxCell = if profile.homeExpanded then 0 else 1, if profile.homeExpanded then GRID + 1 else GRID
+	local count = maxCell - minCell + 1
+	gridLayout.CellSize = UDim2.new(1 / count, -4, 1 / count, -4)
+	for row = 1, count do
+		local z = maxCell + 1 - row
+		for col = 1, count do
+			local x = maxCell + 1 - col
 			local key = x .. "_" .. z
 			local placed = profile.home[key]
 			local design = placed and profile.designs[placed.designId]
@@ -95,6 +102,28 @@ local function render()
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
+	end
+	if not profile.homeExpanded then
+		local expand = UI.Button(list, ("自宅を 8×8 に広げる（%d）"):format(EXPAND_PRICE), if profile.coins >= EXPAND_PRICE then UI.Colors.Coin else UI.Colors.Muted, {
+			Size = UDim2.new(1, -12, 0, 34),
+			LayoutOrder = -1,
+			TextColor3 = Color3.fromRGB(110, 70, 20),
+		})
+		expand.Activated:Connect(function()
+			if busy then
+				return
+			end
+			busy = true
+			local ok, result, message = pcall(function()
+				return expandRemote:InvokeServer()
+			end)
+			busy = false
+			if ok then
+				toast(tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
+			else
+				toast("通信に失敗しました", UI.Colors.Accent)
+			end
+		end)
 	end
 	if not selectedCell then
 		info.Text = "飾りたいマスを選んでね"
@@ -213,6 +242,7 @@ function HomePanel.Start()
 	aspect.Parent = grid
 	local layout = Instance.new("UIGridLayout")
 	layout.CellSize = UDim2.new(1 / GRID, -4, 1 / GRID, -4)
+	gridLayout = layout
 	layout.CellPadding = UDim2.new(0, 4, 0, 4)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
