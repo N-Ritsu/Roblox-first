@@ -40,7 +40,7 @@ local noticeEvent = Net.Event("Notice")
 local function send(player: Player)
 	local order = orders[player]
 	if order then
-		orderEvent:FireClient(player, { label = order.label, bonus = order.bonus, expires = order.expires })
+		orderEvent:FireClient(player, { label = order.label, bonus = order.bonus, expires = order.expires, field = order.field, id = order.id })
 	else
 		orderEvent:FireClient(player, nil)
 	end

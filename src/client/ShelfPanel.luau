@@ -93,7 +93,8 @@ local function render()
 			UI.Stroke(row, UI.Colors.Good, 2)
 		end
 		local sales = profile.designSales and profile.designSales[id] or 0
-		local pick = UI.Button(row, ("%s（在庫 %d・売れた数 %d）"):format(design.name, stock, sales), Color3.new(1, 1, 1), {
+		local mark = if State.MatchesOrder(design) then "注文◎ " else ""
+		local pick = UI.Button(row, ("%s%s（在庫 %d・売れた数 %d）"):format(mark, design.name, stock, sales), Color3.new(1, 1, 1), {
 			Size = UDim2.new(1, -120, 1, -6),
 			Position = UDim2.new(0, 4, 0, 3),
 			BackgroundTransparency = 1,
