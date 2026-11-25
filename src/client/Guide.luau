@@ -24,7 +24,7 @@ local function currentStep(profile: any): (number, string)
 		end
 	end
 	if not hasDesign then
-		return 1, "① 左の「工房」ボタンで、アイテムをデザインして保存しよう"
+		return 1, "① 左の「工房」で見本を選ぶか、アイテムをデザインして保存しよう"
 	end
 	local hasStock = false
 	for _, count in profile.stock do

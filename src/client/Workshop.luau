@@ -11,6 +11,7 @@ local Catalog = require(Shared:WaitForChild("Catalog"))
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
 local Season = require(Shared:WaitForChild("Season"))
+local Templates = require(Shared:WaitForChild("Templates"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
 
@@ -328,7 +329,7 @@ end
 
 local function buildDesignList()
 	for _, child in designList:GetChildren() do
-		if child:IsA("GuiButton") then
+		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
@@ -352,6 +353,20 @@ local function buildDesignList()
 			toast("コピーしました。名前を変えて保存してください")
 		end)
 	end
+	-- 見本から作る（一覧の一番下）
+	UI.Label(designList, "見本から作る", { Size = UDim2.new(1, -8, 0, 22), LayoutOrder = 1000 })
+	for i, template in Templates do
+		local button = UI.Button(designList, "見本：" .. template.name, Color3.fromRGB(150, 110, 210), { Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 1000 + i })
+		button.Activated:Connect(function()
+			editing = deepCopy(template)
+			editId = nil
+			selected = 1
+			nameBox.Text = template.name
+			refresh()
+			toast("見本を読み込みました。好きに変えて保存しよう")
+		end)
+	end
+
 	local profile = State.profile
 	if not profile then
 		return
