@@ -207,24 +207,45 @@ end
 HomeService.PartyInterval = 60
 HomeService.PartyCoinsPerGuest = 5 -- 店主がもらう（訪問者1人あたり、最大5人分）
 HomeService.PartyGuestCoins = 3 -- 訪問者がもらう
-local function runParties()
-	while true do
-		task.wait(HomeService.PartyInterval)
-		local players = game:GetService("Players"):GetPlayers()
-		for _, plot in PlotService.All() do
-			local owner = plot.owner
-			if owner and inRoom(plot, owner) then
-				local guests = {}
-				for _, other in players do
-					if other ~= owner and inRoom(plot, other) then
-						table.insert(guests, other)
-					end
+HomeService.PartyDailyLimit = 30 -- 1人が1日に受け取れる回数（サブアカウントでの放置稼ぎ対策）
+
+-- 今日まだ受け取れるなら回数を1つ使って true
+local function takePartyTurn(player: Player): boolean
+	local profile = DataService.Get(player)
+	if not profile then
+		return false
+	end
+	local day = math.floor((os.time() + 9 * 3600) / 86400) -- 日本時間の通し日数
+	if profile.partyDay ~= day then
+		profile.partyDay = day
+		profile.partyCount = 0
+	end
+	if profile.partyCount >= HomeService.PartyDailyLimit then
+		return false
+	end
+	profile.partyCount += 1
+	return true
+end
+
+local function partyTick()
+	local players = game:GetService("Players"):GetPlayers()
+	for _, plot in PlotService.All() do
+		local owner = plot.owner
+		if owner and inRoom(plot, owner) then
+			local guests = {}
+			for _, other in players do
+				if other ~= owner and inRoom(plot, other) then
+					table.insert(guests, other)
 				end
-				if #guests > 0 then
+			end
+			if #guests > 0 then
+				if takePartyTurn(owner) then
 					local reward = math.min(#guests, 5) * HomeService.PartyCoinsPerGuest
 					DataService.AddCoins(owner, reward)
 					Net.Event("Notice"):FireClient(owner, ("おうちパーティー！ お客さん%d人で +%d コイン"):format(#guests, reward))
-					for _, guest in guests do
+				end
+				for _, guest in guests do
+					if takePartyTurn(guest) then
 						DataService.AddCoins(guest, HomeService.PartyGuestCoins)
 						Net.Event("Notice"):FireClient(guest, ("おうちパーティー！ +%d コイン"):format(HomeService.PartyGuestCoins))
 					end
@@ -234,13 +255,19 @@ local function runParties()
 	end
 end
 
-function HomeService.Start()
-	task.spawn(function()
-		local ok, err = pcall(runParties)
+local function runParties()
+	while true do
+		task.wait(HomeService.PartyInterval)
+		-- 1回のエラーでパーティーが止まったままにならないよう、毎回 pcall で包む
+		local ok, err = pcall(partyTick)
 		if not ok then
 			warn("[HomeService] パーティーのエラー:", err)
 		end
-	end)
+	end
+end
+
+function HomeService.Start()
+	task.spawn(runParties)
 	Net.Function("SetHomeCell").OnServerInvoke = function(player, key, action, designId)
 		local ok, a, b = pcall(setCell, player, key, action, designId)
 		if not ok then

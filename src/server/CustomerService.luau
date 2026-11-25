@@ -547,33 +547,39 @@ function CustomerService.Start()
 	task.spawn(function()
 		while true do
 			task.wait(1)
-			local now = os.clock()
-			for _, plot in PlotService.All() do
-				local owner = plot.owner
-				if owner and hasStockedShelf(owner) then
-					if not nextSpawn[plot.index] then
-						nextSpawn[plot.index] = now + 3
-					elseif now >= nextSpawn[plot.index] and (active[plot.index] or 0) < CustomerService.MaxPerPlot + (if ShopService.Stars(owner) >= 4 then 1 else 0) + (if ShopService.FlyerActive(owner) then 1 else 0) then
-						-- 評判が高い店ほど、お客さんが来る間隔が短い（★5で約0.6倍）
-						local interval = CustomerService.SpawnInterval
-						local speed = (1 + 0.15 * (ShopService.Stars(owner) - 1)) * (if ShopService.FlyerActive(owner) then 1.8 else 1)
-						nextSpawn[plot.index] = now + random:NextNumber(interval[1], interval[2]) / speed
-						active[plot.index] = (active[plot.index] or 0) + 1
-						task.spawn(function()
-							local ctx: { model: Model? } = {}
-							local ok, err = pcall(visit, plot, owner, ctx)
-							if not ok then
-								warn("[CustomerService] エラー:", err)
-								if ctx.model then
-									ctx.model:Destroy()
+			-- 1回のエラーでお客さんが二度と来なくなるのを防ぐ
+			local okTick, tickErr = pcall(function()
+				local now = os.clock()
+				for _, plot in PlotService.All() do
+					local owner = plot.owner
+					if owner and hasStockedShelf(owner) then
+						if not nextSpawn[plot.index] then
+							nextSpawn[plot.index] = now + 3
+						elseif now >= nextSpawn[plot.index] and (active[plot.index] or 0) < CustomerService.MaxPerPlot + (if ShopService.Stars(owner) >= 4 then 1 else 0) + (if ShopService.FlyerActive(owner) then 1 else 0) then
+							-- 評判が高い店ほど、お客さんが来る間隔が短い（★5で約0.6倍）
+							local interval = CustomerService.SpawnInterval
+							local speed = (1 + 0.15 * (ShopService.Stars(owner) - 1)) * (if ShopService.FlyerActive(owner) then 1.8 else 1)
+							nextSpawn[plot.index] = now + random:NextNumber(interval[1], interval[2]) / speed
+							active[plot.index] = (active[plot.index] or 0) + 1
+							task.spawn(function()
+								local ctx: { model: Model? } = {}
+								local ok, err = pcall(visit, plot, owner, ctx)
+								if not ok then
+									warn("[CustomerService] エラー:", err)
+									if ctx.model then
+										ctx.model:Destroy()
+									end
+									active[plot.index] = math.max(0, (active[plot.index] or 1) - 1)
 								end
-								active[plot.index] = math.max(0, (active[plot.index] or 1) - 1)
-							end
-						end)
+							end)
+						end
+					else
+						nextSpawn[plot.index] = nil
 					end
-				else
-					nextSpawn[plot.index] = nil
 				end
+			end)
+			if not okTick then
+				warn("[CustomerService] 来店処理のエラー:", tickErr)
 			end
 		end
 	end)

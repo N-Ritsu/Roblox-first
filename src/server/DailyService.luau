@@ -59,7 +59,10 @@ function DailyService.Start()
 			for _, player in game:GetService("Players"):GetPlayers() do
 				local profile = DataService.Get(player)
 				if profile then
-					check(player, profile)
+					local ok, err = pcall(check, player, profile)
+					if not ok then
+						warn("[DailyService] エラー:", err)
+					end
 				end
 			end
 		end
