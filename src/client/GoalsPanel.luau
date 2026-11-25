@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Goals = require(Shared:WaitForChild("Goals"))
@@ -13,6 +14,8 @@ local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local GoalsPanel = {}
 
+local celebrate: (string, number) -> ()
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local claimRemote = Net.Function("ClaimGoal")
@@ -21,6 +24,41 @@ local panel: Frame
 local list: ScrollingFrame
 local badge: TextLabel
 local busy = false
+
+-- 達成のお祝い：画面中央に大きく出して、少しして消える
+local celebrateGui: ScreenGui? = nil
+celebrate = function(text: string, reward: number)
+	if not celebrateGui then
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "Celebrate"
+		gui.ResetOnSpawn = false
+		gui.DisplayOrder = 40
+		gui.Parent = playerGui
+		celebrateGui = gui
+	end
+	local card = UI.Frame(celebrateGui :: ScreenGui, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.4),
+		Size = UDim2.new(0, 320, 0, 130),
+		BackgroundColor3 = Color3.fromRGB(255, 245, 200),
+	})
+	UI.Corner(card, 18)
+	UI.Stroke(card, UI.Colors.Coin, 4)
+	UI.Label(card, "目標達成！", { Size = UDim2.new(1, -20, 0, 40), Position = UDim2.new(0, 10, 0, 8), TextColor3 = Color3.fromRGB(210, 120, 20) })
+	UI.Label(card, text, { Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 10, 0, 50) })
+	UI.Label(card, ("+%d コイン"):format(reward), { Size = UDim2.new(1, -20, 0, 32), Position = UDim2.new(0, 10, 0, 86), TextColor3 = Color3.fromRGB(210, 140, 20) })
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.4
+	scale.Parent = card
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	task.delay(2.5, function()
+		local fade = TweenService:Create(scale, TweenInfo.new(0.25), { Scale = 0 })
+		fade.Completed:Connect(function()
+			card:Destroy()
+		end)
+		fade:Play()
+	end)
+end
 
 local function render()
 	local profile = State.profile
@@ -80,6 +118,7 @@ local function render()
 				if ok then
 					if result then
 						Sounds.Play("reward")
+						celebrate(goal.text, goal.reward)
 					end
 					UI.Toast(playerGui, tostring(message), if result then UI.Colors.Good else UI.Colors.Accent)
 				else
