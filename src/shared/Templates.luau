@@ -116,6 +116,30 @@ local Templates = {
 			p("Ball", "SnowWhite", "SmoothPlastic", { 1, 1, 1 }, { 0.5, 1.5, 0 }),
 		},
 	},
+	{
+		name = "そり",
+		needs = { colors = { "Berry" } },
+		season = "winter",
+		parts = {
+			p("Block", "Berry", "Wood", { 3, 0.5, 2 }, { 0.5, 1, 0 }),
+			p("Block", "Berry", "Wood", { 0.5, 1.5, 2 }, { 2, 1.5, 0 }),
+			p("Block", "Yellow", "SmoothPlastic", { 4, 0.5, 0.5 }, { 0, 0, -1 }),
+			p("Block", "Yellow", "SmoothPlastic", { 4, 0.5, 0.5 }, { 0, 0, 1 }),
+			p("Cylinder", "Yellow", "SmoothPlastic", { 2.5, 1, 1 }, { -2, 0.5, 0 }, ALONG_Z),
+			p("Block", "Green", "SmoothPlastic", { 1, 1, 1 }, { 0.5, 1.5, 0 }),
+		},
+	},
+	{
+		name = "かまくら",
+		needs = { colors = { "SnowWhite" } },
+		season = "winter",
+		parts = {
+			p("Cylinder", "SnowWhite", "Plastic", { 0.5, 4, 4 }, { 0, -1.5, 0 }, UP),
+			p("Ball", "SnowWhite", "Plastic", { 4, 4, 4 }, { 0, -0.5, 0 }),
+			p("Block", "Black", "Plastic", { 1.5, 1.5, 0.5 }, { 0, -0.5, -1.8 }),
+			p("Ball", "Yellow", "SmoothPlastic", { 0.5, 0.5, 0.5 }, { 0, -1, -2 }),
+		},
+	},
 }
 
 return Templates
