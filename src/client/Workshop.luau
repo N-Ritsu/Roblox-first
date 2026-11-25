@@ -286,6 +286,23 @@ local function buildControls()
 		end)
 	end
 
+	-- 選んでいる部品の色・素材を全部の部品にそろえる
+	if #parts > 1 then
+		local matchGrid = section("そろえる", UDim2.new(0, 150, 0, 32))
+		choiceButton(matchGrid, "色を全部にそろえる", false, true, 1, function()
+			for _, p in parts do
+				p.color = part.color
+			end
+			refresh()
+		end)
+		choiceButton(matchGrid, "素材を全部にそろえる", false, true, 2, function()
+			for _, p in parts do
+				p.material = part.material
+			end
+			refresh()
+		end)
+	end
+
 	-- 形
 	local shapeGrid = section("形")
 	for i, shape in Catalog.Shapes do
