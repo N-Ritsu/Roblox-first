@@ -1,6 +1,7 @@
 --!strict
 -- 広場の「人気のお店」ランキング掲示板（このサーバーにいる人の、売った数の多い順）
 
+local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 
 local DataService = require(script.Parent:WaitForChild("DataService"))
@@ -10,6 +11,91 @@ local WorldService = require(script.Parent:WaitForChild("WorldService"))
 local RankingService = {}
 
 RankingService.Shown = 6
+
+-- 全サーバーのランキング（OrderedDataStore）。掲示板の裏面に表示する。失敗してもゲームは止めない
+RankingService.GlobalInterval = 300 -- 秒（DataStore の回数制限に配慮して5分ごと）
+RankingService.GlobalShown = 10
+
+local function startGlobal(board: BasePart)
+	local ok, store = pcall(function()
+		return DataStoreService:GetOrderedDataStore("SoldRanking_v1")
+	end)
+	if not ok then
+		warn("[RankingService] 全サーバーランキングを使えません:", store)
+		return
+	end
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Back
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 30
+	gui.LightInfluence = 0
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Padding = UDim.new(0, 2)
+	layout.Parent = gui
+	local function line(order: number, text: string, color: Color3, height: number): TextLabel
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0.92, 0, 0, height)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.TextColor3 = color
+		label.Text = text
+		label.LayoutOrder = order
+		label.Parent = gui
+		return label
+	end
+	line(0, "全サーバー 売った数ランキング", Color3.fromRGB(255, 220, 90), 40)
+	local rows = {}
+	for i = 1, RankingService.GlobalShown do
+		rows[i] = line(i, "", Color3.new(1, 1, 1), 24)
+	end
+	rows[1].Text = "集計中…"
+	gui.Parent = board
+
+	local names: { [number]: string } = {}
+	local function nameOf(userId: number): string
+		if names[userId] then
+			return names[userId]
+		end
+		local okName, name = pcall(function()
+			return Players:GetNameFromUserIdAsync(userId)
+		end)
+		local result = if okName and type(name) == "string" then name else "？"
+		names[userId] = result
+		return result
+	end
+
+	task.spawn(function()
+		while true do
+			-- このサーバーにいる人の記録を書き込む
+			for _, player in Players:GetPlayers() do
+				local profile = DataService.Get(player)
+				if profile and profile.stats.sold > 0 then
+					pcall(function()
+						(store :: OrderedDataStore):SetAsync(tostring(player.UserId), math.floor(profile.stats.sold))
+					end)
+				end
+			end
+			-- 上位を読み込む
+			local okRead, page = pcall(function()
+				return (store :: OrderedDataStore):GetSortedAsync(false, RankingService.GlobalShown):GetCurrentPage()
+			end)
+			if okRead and type(page) == "table" then
+				for i, row in rows do
+					local entry = page[i]
+					local userId = entry and tonumber(entry.key)
+					row.Text = if entry and userId then ("%d位　%s　%d個"):format(i, nameOf(userId), entry.value) else ""
+				end
+				if #page == 0 then
+					rows[1].Text = "まだ記録がありません"
+				end
+			end
+			task.wait(RankingService.GlobalInterval)
+		end
+	end)
+end
 
 function RankingService.Start()
 	local board = Build.Part(workspace:WaitForChild("Plaza"), {
@@ -80,6 +166,8 @@ function RankingService.Start()
 			task.wait(10)
 		end
 	end)
+
+	startGlobal(board)
 end
 
 return RankingService
