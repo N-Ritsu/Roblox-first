@@ -3,6 +3,7 @@ local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared
 
 local modules = {
 	"Hud",
+	"Workshop",
 }
 
 for _, name in modules do

@@ -100,6 +100,21 @@ local function buildPlot(index: number, origin: CFrame, parent: Instance): Plot
 	Build.Part(model, { Name = "Counter", Size = Vector3.new(8, 3.5, 2), CFrame = at(8, 2.65, 13.5), Color = TRIM, Material = Enum.Material.Wood })
 	Build.Part(model, { Name = "CounterTop", Size = Vector3.new(8.4, 0.3, 2.4), CFrame = at(8, 4.55, 13.5), Color = Color3.fromRGB(240, 240, 240), Material = Enum.Material.Marble })
 
+	-- 工房（作業台）
+	local bench = Build.Part(model, { Name = "Workbench", Size = Vector3.new(7, 3, 3.5), CFrame = origin * PlotService.WorkbenchOffset * CFrame.new(0, 1.5, 0), Color = Color3.fromRGB(150, 105, 70), Material = Enum.Material.WoodPlanks })
+	Build.Part(model, { Name = "BenchTool", Size = Vector3.new(1.2, 1.2, 1.2), CFrame = origin * PlotService.WorkbenchOffset * CFrame.new(-2, 3.6, 0), Color = Color3.fromRGB(90, 170, 240), Material = Enum.Material.SmoothPlastic })
+	Build.Part(model, { Name = "BenchTool", Size = Vector3.new(1, 1, 1), CFrame = origin * PlotService.WorkbenchOffset * CFrame.new(1.5, 3.5, 0.5), Color = Color3.fromRGB(240, 120, 80), Material = Enum.Material.SmoothPlastic, Shape = Enum.PartType.Ball })
+	local benchSign = Build.Part(model, { Name = "BenchSign", Size = Vector3.new(6, 1.6, 0.3), CFrame = origin * PlotService.WorkbenchOffset * CFrame.new(0, 6, 1.6), Color = Color3.fromRGB(90, 170, 240) })
+	Build.Sign(benchSign, "工房", Enum.NormalId.Front)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "WorkbenchPrompt"
+	prompt.ActionText = "アイテムを作る"
+	prompt.ObjectText = "工房"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = bench
+
 	-- 照明
 	local lampPart = Build.Part(model, { Name = "Lamp", Size = Vector3.new(4, 0.4, 4), CFrame = at(0, 12.7, 6), Color = Color3.fromRGB(255, 245, 210), Material = Enum.Material.Neon, CanCollide = false })
 	local light = Instance.new("PointLight")
