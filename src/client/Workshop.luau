@@ -409,15 +409,33 @@ local function buildDesignList()
 	-- 見本から作る（一覧の一番下）
 	UI.Label(designList, "見本から作る", { Size = UDim2.new(1, -8, 0, 22), LayoutOrder = 1000 })
 	for i, template in Templates do
-		local button = UI.Button(designList, "見本：" .. template.name, Color3.fromRGB(150, 110, 210), { Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 1000 + i })
+		-- 解放していない形を使う見本は、読み込めるが保存には解放が必要
+		local missing: { string } = {}
+		for _, shapeId in (template :: any).needs or {} do
+			if not unlocked("shapes", shapeId) then
+				local shape = Catalog.ShapeById[shapeId]
+				table.insert(missing, if shape then shape.name else shapeId)
+			end
+		end
+		local needText = if #missing > 0 then ("（%sの解放が必要）"):format(table.concat(missing, "・")) else ""
+		local button = UI.Button(
+			designList,
+			"見本：" .. template.name .. needText,
+			if #missing > 0 then Color3.fromRGB(150, 140, 165) else Color3.fromRGB(150, 110, 210),
+			{ Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 1000 + i }
+		)
 		button.Activated:Connect(function()
-			editing = deepCopy(template)
+			editing = { name = template.name, parts = deepCopy(template.parts) }
 			editId = nil
 			selected = 1
 			history = {}
 			nameBox.Text = template.name
 			refresh()
-			toast("見本を読み込みました。好きに変えて保存しよう")
+			if #missing > 0 then
+				toast(("見本を読み込みました。保存するには「部品」で%sを解放しよう"):format(table.concat(missing, "・")))
+			else
+				toast("見本を読み込みました。好きに変えて保存しよう")
+			end
 		end)
 	end
 

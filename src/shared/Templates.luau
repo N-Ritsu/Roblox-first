@@ -1,5 +1,7 @@
 --!strict
--- 工房の見本デザイン（最初から使える部品だけで作ってある）
+-- 工房の見本デザイン（needs がないものは最初から使える部品だけで作ってある）
+-- needs = 保存に解放が必要な形の id（部品ショップで解放する動機づけ）
+-- くさびは高い面が奥（+Z）で、手前に向かって下る。よこ回転4（180°）で向きが逆になる
 -- 円柱は横向き（X方向）が基本なので、rot = {2, 2}（たて90°・よこ90°）で縦向きになる
 
 local function p(shape: string, color: string, material: string, size: { number }, pos: { number }, rot: { number }?)
@@ -64,6 +66,28 @@ local Templates = {
 			p("Ball", "White", "SmoothPlastic", { 3, 3, 3 }, { 0, 0, 0 }),
 			p("Ball", "White", "SmoothPlastic", { 2, 2, 2 }, { 0, 2.5, 0 }),
 			p("Cylinder", "Black", "SmoothPlastic", { 1, 1.5, 1.5 }, { 0, 3.5, 0 }, UP),
+		},
+	},
+	{
+		name = "おうち",
+		needs = { "Wedge" },
+		parts = {
+			p("Block", "White", "Plastic", { 4, 3, 4 }, { 0, 0, 0 }),
+			p("Wedge", "Red", "Plastic", { 4, 2, 2 }, { 0, 2.5, -1 }),
+			p("Wedge", "Red", "Plastic", { 4, 2, 2 }, { 0, 2.5, 1 }, { 0, 4 }),
+			p("Block", "Brown", "Wood", { 1, 2, 0.5 }, { 0, -0.5, -2 }),
+			p("Block", "Yellow", "SmoothPlastic", { 1, 1, 0.5 }, { -1.5, 0.5, -2 }),
+			p("Block", "Yellow", "SmoothPlastic", { 1, 1, 0.5 }, { 1.5, 0.5, -2 }),
+		},
+	},
+	{
+		name = "すべり台",
+		needs = { "Wedge" },
+		parts = {
+			p("Block", "Blue", "SmoothPlastic", { 2, 3, 2 }, { 0, 0, 1 }),
+			p("Wedge", "Yellow", "SmoothPlastic", { 2, 3, 3 }, { 0, 0, -1.5 }),
+			p("Block", "Red", "SmoothPlastic", { 0.5, 1, 2 }, { -1, 2, 1 }),
+			p("Block", "Red", "SmoothPlastic", { 0.5, 1, 2 }, { 1, 2, 1 }),
 		},
 	},
 }
