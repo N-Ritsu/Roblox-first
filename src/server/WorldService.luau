@@ -117,9 +117,27 @@ local function setupPlaza()
 	plaza.Parent = workspace
 end
 
+-- 昼と夜：1日＝約20分。夜（19時〜5時）は2倍の速さで進めて、暗い時間を短くする
+WorldService.DaySeconds = 20 * 60
+local function runDayNight()
+	local hoursPerSecond = 24 / WorldService.DaySeconds
+	local last = os.clock()
+	while true do
+		task.wait(0.5)
+		local now = os.clock()
+		local dt = now - last
+		last = now
+		local clock = Lighting.ClockTime
+		local speed = if clock >= 19 or clock < 5 then 2 else 1
+		Lighting.ClockTime = (clock + dt * hoursPerSecond * speed) % 24
+	end
+end
+
 function WorldService.Start()
 	setupLighting()
 	setupPlaza()
+	Lighting.ClockTime = 9
+	task.spawn(runDayNight)
 end
 
 return WorldService
