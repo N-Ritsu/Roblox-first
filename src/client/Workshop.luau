@@ -269,6 +269,18 @@ local function buildControls()
 				toast("真ん中にある部品なので同じ場所に重なっています。左右に動かしてから使うと便利です")
 			end
 		end)
+		-- 上下反転コピー：上下の鏡写しは、位置の上下を反対にし、たて回転を逆向きにする（箱・球・円柱。くさびは形が上下非対称なので向きだけそろう）
+		choiceButton(partsGrid, "上下反転", false, true, 105, function()
+			local copy = deepCopy(part)
+			copy.pos[2] = -copy.pos[2]
+			copy.rot[1] = (-copy.rot[1]) % 8
+			table.insert(parts, copy)
+			selected = #parts
+			refresh()
+			if part.pos[2] == 0 then
+				toast("高さが真ん中の部品なので同じ場所に重なっています。上下に動かしてから使うと便利です")
+			end
+		end)
 	end
 	if #parts > 1 then
 		choiceButton(partsGrid, "削除", false, true, 102, function()
