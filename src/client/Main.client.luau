@@ -13,6 +13,7 @@ local modules = {
 	"HelpPanel",
 	"Guide",
 	"HomePanel",
+	"DecorFun",
 	"Prompts", -- Plots を待つので最後
 }
 
