@@ -1,24 +1,16 @@
--- 仮のサーバースクリプト（公開パイプラインの動作確認用）
--- 最初の自動実行で、Claude が DIRECTION.md に沿ってゲーム本体に置き換えます。
+-- サーバーの起動スクリプト：各サービスを順に起動する
 
-local Players = game:GetService("Players")
+local services = {
+	"WorldService",
+	"DataService",
+	"PlotService",
+}
 
-local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
-
-Players.PlayerAdded:Connect(function(player)
-	local leaderstats = Instance.new("Folder")
-	leaderstats.Name = "leaderstats"
-	leaderstats.Parent = player
-
-	local points = Instance.new("IntValue")
-	points.Name = "Points"
-	points.Value = 0
-	points.Parent = leaderstats
-
-	task.spawn(function()
-		while player.Parent do
-			task.wait(Config.PointInterval)
-			points.Value += 1
-		end
+for _, name in services do
+	local ok, err = pcall(function()
+		require(script.Parent:WaitForChild(name)).Start()
 	end)
-end)
+	if not ok then
+		warn(("[Main] %s の起動に失敗: %s"):format(name, tostring(err)))
+	end
+end

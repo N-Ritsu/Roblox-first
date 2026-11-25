@@ -25,10 +25,22 @@
         "$properties": {
           "Anchored": true,
           "Locked": true,
-          "Size": [512, 20, 512],
-          "Position": [0, -10, 0],
-          "Color": [0.388, 0.372, 0.384],
-          "Material": "Plastic",
+          "Size": [
+            512,
+            20,
+            512
+          ],
+          "Position": [
+            0,
+            -10,
+            0
+          ],
+          "Color": [
+            0.44,
+            0.66,
+            0.36
+          ],
+          "Material": "Grass",
           "TopSurface": "Smooth",
           "BottomSurface": "Smooth"
         }
@@ -37,16 +49,26 @@
         "$className": "SpawnLocation",
         "$properties": {
           "Anchored": true,
-          "Size": [12, 1, 12],
-          "Position": [0, 0.5, 0],
+          "Size": [
+            12,
+            1,
+            12
+          ],
+          "Position": [
+            0,
+            0.5,
+            -20
+          ],
           "Neutral": true,
-          "Duration": 0
+          "Duration": 0,
+          "Transparency": 1,
+          "CanCollide": false
         }
       }
     },
     "Lighting": {
       "$properties": {
-        "ClockTime": 14
+        "ClockTime": 14.5
       }
     }
   }
