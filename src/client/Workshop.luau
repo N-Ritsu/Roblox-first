@@ -339,7 +339,7 @@ local function buildDesignList()
 	end)
 	if editId then
 		-- 今のデザインを元に、別のデザインとして作り始める
-		local copyButton = UI.Button(designList, "今のデザインをコピー", Color3.fromRGB(90, 170, 240), { Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 0 })
+		local copyButton = UI.Button(designList, "今のデザインをコピー", Color3.fromRGB(90, 170, 240), { Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 1 })
 		copyButton.Activated:Connect(function()
 			editing = deepCopy(editing)
 			editId = nil
@@ -369,12 +369,13 @@ local function buildDesignList()
 		local active = id == editId
 		local button = UI.Button(designList, design.name, if active then UI.Colors.Good else Color3.fromRGB(205, 150, 110), {
 			Size = UDim2.new(1, -8, 0, 30),
-			LayoutOrder = i,
+			LayoutOrder = i + 1,
 		})
 		button.Activated:Connect(function()
 			editing = deepCopy(design)
 			editId = id
 			selected = 1
+			nameBox.Text = design.name or ""
 			refresh()
 		end)
 	end
