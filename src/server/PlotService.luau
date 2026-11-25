@@ -102,7 +102,7 @@ PlotService.HomeWallSlots = 6
 function PlotService.HomeWallOffset(i: number): CFrame
 	local x = (i - (PlotService.HomeWallSlots + 1) / 2) * 6
 	-- 部屋の中を向くよう180°回す（奥の壁から手前を見る）
-	return PlotService.HomeOffset * CFrame.new(x, 6, PlotService.HomeRoomHalf - 1.6) * CFrame.Angles(0, math.pi, 0)
+	return PlotService.HomeOffset * CFrame.new(x, 6, PlotService.HomeRoomHalf - 1.3) * CFrame.Angles(0, math.pi, 0)
 end
 
 local function buildHome(model: Model, origin: CFrame, accent: Color3)
