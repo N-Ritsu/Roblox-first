@@ -1,5 +1,5 @@
 --!strict
--- 広場の「人気のお店」ランキング掲示板（このサーバーにいる人の、売った数の多い順）
+-- 広場の「人気のお店」ランキング掲示板（このサーバーにいる人の、売った数の多い順）と、今日の1位の店の王冠
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local Net = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Net"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local Build = require(script.Parent:WaitForChild("Build"))
+local PlotService = require(script.Parent:WaitForChild("PlotService"))
 local WorldService = require(script.Parent:WaitForChild("WorldService"))
 
 local RankingService = {}
@@ -144,6 +145,50 @@ local function startGlobal(board: BasePart)
 	end)
 end
 
+-- 今日の1位の店の看板の上に乗せる王冠（パーツだけで作る）
+local GOLD = Color3.fromRGB(250, 200, 60)
+local function buildCrown(sign: BasePart): Model
+	local crown = Instance.new("Model")
+	crown.Name = "TodayCrown"
+	local base = sign.CFrame * CFrame.new(0, sign.Size.Y / 2 + 0.6, 0)
+	Build.Part(crown, {
+		Name = "Band",
+		Size = Vector3.new(1, 3, 3),
+		CFrame = base * CFrame.Angles(0, 0, math.rad(90)),
+		Color = GOLD,
+		Material = Enum.Material.Metal,
+		Shape = Enum.PartType.Cylinder,
+		CanCollide = false,
+	})
+	for i = 1, 5 do
+		local angle = (i - 1) / 5 * math.pi * 2
+		Build.Part(crown, {
+			Name = "Point",
+			Size = Vector3.new(0.7, 0.7, 0.7),
+			CFrame = base * CFrame.new(math.cos(angle) * 1.3, 0.8, math.sin(angle) * 1.3),
+			Color = GOLD,
+			Material = Enum.Material.Neon,
+			Shape = Enum.PartType.Ball,
+			CanCollide = false,
+		})
+	end
+	local jewel = Build.Part(crown, {
+		Name = "Jewel",
+		Size = Vector3.new(0.6, 0.6, 0.6),
+		CFrame = base * CFrame.new(0, 0, -1.45),
+		Color = Color3.fromRGB(230, 50, 70),
+		Material = Enum.Material.Neon,
+		Shape = Enum.PartType.Ball,
+		CanCollide = false,
+	})
+	local light = Instance.new("PointLight")
+	light.Range = 10
+	light.Color = GOLD
+	light.Parent = jewel
+	crown.Parent = sign.Parent
+	return crown
+end
+
 function RankingService.Start()
 	local board = Build.Part(workspace:WaitForChild("Plaza"), {
 		Name = "RankingBoard",
@@ -194,6 +239,23 @@ function RankingService.Start()
 	gui.Parent = board
 	local noticeEvent = Net.Event("Notice")
 	local leader: Player? = nil
+	local crown: Model? = nil
+	local crownPlot: any = nil
+	-- 王冠を今の1位の店へ（いなければ外す）
+	local function placeCrown(plot: any)
+		if plot == crownPlot and crown and crown.Parent then
+			return
+		end
+		if crown then
+			crown:Destroy()
+			crown = nil
+		end
+		crownPlot = plot
+		local sign = plot and plot.model:FindFirstChild("Sign")
+		if sign and sign:IsA("BasePart") then
+			crown = buildCrown(sign)
+		end
+	end
 
 	local function refresh()
 		local entries = {}
@@ -212,9 +274,12 @@ function RankingService.Start()
 		end
 		todayRow.Text = if best then ("今日いちばん売れた店：%s のお店（%d個）"):format(bestName, bestSold) else "今日はまだだれも売っていません"
 		-- 新しく1位になったら本人に知らせる（ほかにも人がいて、3個以上売れているときだけ）
-		if best and best ~= leader and bestSold >= 3 and #entries >= 2 then
+		-- 1位の印（王冠・お知らせ）は、ほかにも人がいて3個以上売れているときだけ
+		local crowned = best and bestSold >= 3 and #entries >= 2
+		placeCrown(if crowned and best then PlotService.Get(best) else nil)
+		if crowned and best and best ~= leader then
 			leader = best
-			noticeEvent:FireClient(best, "今日このサーバーでいちばん売れているお店になりました！ 広場の掲示板に出ています")
+			noticeEvent:FireClient(best, "今日このサーバーでいちばん売れているお店になりました！ 看板に王冠がつきました")
 		end
 		table.sort(entries, function(a, b)
 			return a.sold > b.sold
