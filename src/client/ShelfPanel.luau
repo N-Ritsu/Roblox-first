@@ -186,7 +186,7 @@ local function createGui()
 		Position = UDim2.new(0, 12, 1, -94),
 	})
 	priceBox = Instance.new("TextBox")
-	priceBox.Size = UDim2.new(1, -84, 0, 40)
+	priceBox.Size = UDim2.new(1, -300, 0, 40)
 	priceBox.Position = UDim2.new(0, 72, 1, -94)
 	priceBox.BackgroundColor3 = Color3.new(1, 1, 1)
 	priceBox.Font = UI.Font
@@ -198,6 +198,23 @@ local function createGui()
 	UI.Corner(priceBox, 10)
 	UI.Stroke(priceBox)
 	priceBox.Parent = panel
+	-- 値段のワンタッチ：相場（価値）に対する倍率
+	local presets = { { text = "安め", rate = 0.9 }, { text = "相場", rate = 1 }, { text = "高め", rate = 1.3 } }
+	for i, preset in presets do
+		local button = UI.Button(panel, preset.text, Color3.fromRGB(205, 150, 110), {
+			Size = UDim2.new(0, 66, 0, 40),
+			Position = UDim2.new(1, -12 - (4 - i) * 70, 1, -94),
+		})
+		button.Activated:Connect(function()
+			local profile = State.profile
+			local design = profile and chosenId and profile.designs[chosenId]
+			if not design then
+				toast("先に並べる商品を選んでください", UI.Colors.Accent)
+				return
+			end
+			priceBox.Text = tostring(math.max(1, math.floor(ItemBuilder.Value(design) * preset.rate + 0.5)))
+		end)
+	end
 	priceBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local digits = string.gsub(priceBox.Text, "%D", "")
 		digits = string.sub(digits, 1, 4)
