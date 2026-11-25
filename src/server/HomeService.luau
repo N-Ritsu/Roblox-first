@@ -192,7 +192,55 @@ evictVisitors = function(plot: PlotService.Plot, owner: Player?)
 	end
 end
 
+-- その区画の自宅の部屋の中にいるか
+local function inRoom(plot: PlotService.Plot, player: Player): boolean
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return false
+	end
+	local p = (plot.origin * PlotService.HomeOffset):PointToObjectSpace(root.Position)
+	local half = PlotService.HomeRoomHalf
+	return math.abs(p.X) < half and math.abs(p.Z) < half and p.Y > -1 and p.Y < 15
+end
+
+-- おうちパーティー：店主が自宅にいて訪問者もいると、1分ごとに店主と訪問者にコイン
+HomeService.PartyInterval = 60
+HomeService.PartyCoinsPerGuest = 5 -- 店主がもらう（訪問者1人あたり、最大5人分）
+HomeService.PartyGuestCoins = 3 -- 訪問者がもらう
+local function runParties()
+	while true do
+		task.wait(HomeService.PartyInterval)
+		local players = game:GetService("Players"):GetPlayers()
+		for _, plot in PlotService.All() do
+			local owner = plot.owner
+			if owner and inRoom(plot, owner) then
+				local guests = {}
+				for _, other in players do
+					if other ~= owner and inRoom(plot, other) then
+						table.insert(guests, other)
+					end
+				end
+				if #guests > 0 then
+					local reward = math.min(#guests, 5) * HomeService.PartyCoinsPerGuest
+					DataService.AddCoins(owner, reward)
+					Net.Event("Notice"):FireClient(owner, ("おうちパーティー！ お客さん%d人で +%d コイン"):format(#guests, reward))
+					for _, guest in guests do
+						DataService.AddCoins(guest, HomeService.PartyGuestCoins)
+						Net.Event("Notice"):FireClient(guest, ("おうちパーティー！ +%d コイン"):format(HomeService.PartyGuestCoins))
+					end
+				end
+			end
+		end
+	end
+end
+
 function HomeService.Start()
+	task.spawn(function()
+		local ok, err = pcall(runParties)
+		if not ok then
+			warn("[HomeService] パーティーのエラー:", err)
+		end
+	end)
 	Net.Function("SetHomeCell").OnServerInvoke = function(player, key, action, designId)
 		local ok, a, b = pcall(setCell, player, key, action, designId)
 		if not ok then
