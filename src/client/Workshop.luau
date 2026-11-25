@@ -57,10 +57,35 @@ local function deepCopy(value: any): any
 	return copy
 end
 
+-- 元に戻す：変更のたびに部品の状態を記録しておく（最大10回分）
+local HISTORY_LIMIT = 10
+local history: { any } = {}
+
+local function partsKey(parts: any): string
+	local pieces = {}
+	for _, p in parts do
+		table.insert(pieces, table.concat({ p.shape, p.color, p.material, table.concat(p.size, ","), table.concat(p.pos, ","), table.concat(p.rot, ",") }, "/"))
+	end
+	return table.concat(pieces, ";")
+end
+
+local function recordHistory()
+	local top = history[#history]
+	if top and partsKey(top) == partsKey(editing.parts) then
+		return
+	end
+	table.insert(history, deepCopy(editing.parts))
+	-- 「今の状態」＋10回分を残す
+	while #history > HISTORY_LIMIT + 1 do
+		table.remove(history, 1)
+	end
+end
+
 local function newDesign()
 	editing = { name = "", parts = { ItemBuilder.NewPart() } }
 	editId = nil
 	selected = 1
+	history = {}
 end
 
 local function unlocked(kind: string, id: string): boolean
@@ -233,6 +258,14 @@ local function buildControls()
 			refresh()
 		end)
 	end
+	if #history > 1 then
+		choiceButton(partsGrid, "元に戻す", false, true, 103, function()
+			table.remove(history) -- 今の状態を捨てて
+			editing.parts = deepCopy(history[#history]) -- 1つ前に戻る
+			selected = math.clamp(selected, 1, #editing.parts)
+			refresh()
+		end)
+	end
 
 	-- 形
 	local shapeGrid = section("形")
@@ -376,6 +409,7 @@ local function buildDesignList()
 			editing = deepCopy(template)
 			editId = nil
 			selected = 1
+			history = {}
 			nameBox.Text = template.name
 			refresh()
 			toast("見本を読み込みました。好きに変えて保存しよう")
@@ -408,6 +442,7 @@ local function buildDesignList()
 			editing = deepCopy(design)
 			editId = id
 			selected = 1
+			history = {}
 			nameBox.Text = design.name or ""
 			refresh()
 		end)
@@ -436,6 +471,7 @@ local function updateInfo()
 end
 
 refresh = function()
+	recordHistory()
 	buildControls()
 	refreshPreview()
 	updateInfo()
