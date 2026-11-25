@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
 local ItemBuilder = require(Shared:WaitForChild("ItemBuilder"))
 local Net = require(Shared:WaitForChild("Net"))
+local Season = require(Shared:WaitForChild("Season"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
 
@@ -251,6 +252,9 @@ local function buildControls()
 	local colorGrid = section("色", UDim2.new(0, 36, 0, 36))
 	for i, color in Catalog.Colors do
 		local isUnlocked = unlocked("colors", color.id)
+		if color.season and not isUnlocked and not Season.IsActive(color.season) then
+			continue -- 期間外の限定色は出さない
+		end
 		local swatch = UI.Button(colorGrid, if isUnlocked then "" else "🔒", color.color, { LayoutOrder = i })
 		if not isUnlocked then
 			swatch.BackgroundTransparency = 0.6

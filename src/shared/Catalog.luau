@@ -3,7 +3,8 @@
 -- unlockPrice = 0 のものは最初から使える。それ以外はコインで解放する（部品ショップ）
 
 export type Shape = { id: string, name: string, unlockPrice: number, value: number }
-export type ColorEntry = { id: string, name: string, color: Color3, unlockPrice: number, value: number }
+-- season がある部品は、その季節イベントの期間だけ解放できる（解放したものはずっと使える）
+export type ColorEntry = { id: string, name: string, color: Color3, unlockPrice: number, value: number, season: string? }
 export type MaterialEntry = { id: string, name: string, material: Enum.Material, unlockPrice: number, value: number }
 
 local Catalog = {}
@@ -31,6 +32,9 @@ Catalog.Colors = {
 	{ id = "Mint", name = "ミント", color = Color3.fromRGB(150, 235, 200), unlockPrice = 100, value = 1.2 },
 	{ id = "Gold", name = "金", color = Color3.fromRGB(240, 190, 60), unlockPrice = 300, value = 1.5 },
 	{ id = "Silver", name = "銀", color = Color3.fromRGB(190, 195, 205), unlockPrice = 200, value = 1.4 },
+	{ id = "SnowWhite", name = "雪白", color = Color3.fromRGB(248, 252, 255), unlockPrice = 150, value = 1.4, season = "winter" },
+	{ id = "Holly", name = "ヒイラギ緑", color = Color3.fromRGB(30, 115, 60), unlockPrice = 150, value = 1.4, season = "winter" },
+	{ id = "Berry", name = "ヒイラギ赤", color = Color3.fromRGB(185, 25, 45), unlockPrice = 150, value = 1.4, season = "winter" },
 } :: { ColorEntry }
 
 Catalog.Materials = {

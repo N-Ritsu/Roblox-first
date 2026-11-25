@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
 local Net = require(Shared:WaitForChild("Net"))
+local Season = require(Shared:WaitForChild("Season"))
 local State = require(script.Parent:WaitForChild("State"))
 local UI = require(script.Parent:WaitForChild("UI"))
 
@@ -48,6 +49,9 @@ local function render()
 	end)
 	for i, entry in entries do
 		local owned = profile.unlocks[tab.kind][entry.id] == true
+		if entry.season and not owned and not Season.IsActive(entry.season) then
+			continue -- 期間外の限定部品は出さない
+		end
 		local row = UI.Frame(list, {
 			Size = UDim2.new(1, -12, 0, 44),
 			BackgroundColor3 = Color3.new(1, 1, 1),
@@ -60,7 +64,7 @@ local function render()
 			BackgroundColor3 = if tab.kind == "colors" then entry.color else UI.Colors.PanelDark,
 		})
 		UI.Corner(swatch, 8)
-		UI.Label(row, ("%s（価値 ×%.1f）"):format(entry.name, entry.value), {
+		UI.Label(row, ("%s%s（価値 ×%.1f）"):format(entry.name, if entry.season then "【期間限定】" else "", entry.value), {
 			Size = UDim2.new(1, -170, 1, -10),
 			Position = UDim2.new(0, 46, 0, 5),
 			TextXAlignment = Enum.TextXAlignment.Left,

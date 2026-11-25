@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("Catalog"))
 local Net = require(Shared:WaitForChild("Net"))
+local Season = require(Shared:WaitForChild("Season"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 
 local UnlockService = {}
@@ -32,6 +33,9 @@ local function unlock(player: Player, kind: any, id: any): (boolean, string)
 	local unlocks = (profile.unlocks :: any)[kind]
 	if unlocks[id] then
 		return false, "もう解放しています"
+	end
+	if not Season.IsActive(entry.season) then
+		return false, "期間限定の部品です。イベント期間中に解放できます"
 	end
 	if not DataService.TrySpend(player, entry.unlockPrice) then
 		return false, ("コインが足りません（%d コイン必要）"):format(entry.unlockPrice)
